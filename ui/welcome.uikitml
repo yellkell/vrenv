@@ -41,7 +41,7 @@
   }
 </style>
 <div class="panel-container">
-  <span class="heading"> Glass Heights </span>
-  <span class="sub-heading"> You're in a glass penthouse high above the city. Walk to the windows and look down. Pick up the floating crystals. Put the headset on and enter XR to feel the height.</span>
+  <span class="heading"> Mirror's Edge Heights </span>
+  <span class="sub-heading"> A clean white rooftop high above the city. Follow the red stripe to the windows and look down. Grab the floating red cubes. Put the headset on and enter XR to feel the drop.</span>
   <button id="xr-button">Enter XR</button>
 </div>

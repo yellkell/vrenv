@@ -1,71 +1,69 @@
 /**
- * Glassmorphic material toolkit + tiny deterministic helpers.
+ * Surface toolkit + tiny deterministic helpers.
  *
- * Performance note (important for Quest): real frosted glass uses
- * `transmission`/refraction, which is genuinely expensive in VR. So instead of
- * faking physics, we *fake the look*: a translucent MeshStandardMaterial that
- * leans on the image-based-lighting reflection + a soft emissive tint. This
- * reads as "glassmorphism" (frosted, glowing, layered) but stays cheap enough
- * to hold 72-90 FPS.
+ * The Mirror's Edge look is mostly clean matte/semi-gloss white with sparse
+ * bold accents and clear glass — not frosted glassmorphism — so most surfaces
+ * here are simple, bright MeshStandardMaterials that lean on the image-based
+ * lighting for soft sky reflections. Cheap, and holds 72-90 FPS on Quest.
  */
 
 import { Color, MeshStandardMaterial, DoubleSide, FrontSide } from '@iwsdk/core';
 import { CONFIG } from './config.js';
 
-export interface GlassOptions {
-  tint?: string;
-  /** 0 (clear) .. 1 (solid frosted). Defaults to the master config value. */
-  opacity?: number;
-  /** 0 (mirror) .. 1 (sandblasted). Defaults to the master config value. */
-  frost?: number;
-  /** Soft inner glow. Good for centerpieces and edges. */
-  glow?: number;
-  /** Both-sides rendering — needed for thin panels you can walk around. */
-  doubleSided?: boolean;
-  /** Reflectivity of the IBL environment. */
-  envIntensity?: number;
-}
-
-/**
- * The one material everything glassy is built from. Translucent, lightly
- * reflective, softly glowing — the signature glassmorphic surface.
- */
-export function makeGlass(opts: GlassOptions = {}): MeshStandardMaterial {
-  const tint = new Color(opts.tint ?? CONFIG.palette.glassTints[0]);
-  const opacity = opts.opacity ?? CONFIG.mood.glassOpacity;
-  const frost = opts.frost ?? CONFIG.mood.frost;
-  const glow = opts.glow ?? 0.04;
-
-  const mat = new MeshStandardMaterial({
-    color: tint,
-    transparent: opacity < 0.98,
-    opacity,
-    // Frost maps to roughness; clear glass is smooth and mirror-like.
-    roughness: 0.05 + frost * 0.6,
+/** Clean architectural matte surface — the workhorse white of the whole scene. */
+export function makeMatte(tint: string, roughness = 0.72): MeshStandardMaterial {
+  return new MeshStandardMaterial({
+    color: new Color(tint),
+    roughness,
     metalness: 0.0,
-    // A faint self-lit tint keeps shadowed glass from reading as dead black
-    // at twilight, which is most of the glassmorphic charm.
-    emissive: tint.clone().multiplyScalar(glow),
-    emissiveIntensity: 1,
-    envMapIntensity: opts.envIntensity ?? 1.4,
-    side: opts.doubleSided ? DoubleSide : FrontSide,
-    // Transparent surfaces shouldn't write depth, or stacked panes punch holes
-    // in each other. We accept a little back-to-front imperfection for speed.
-    depthWrite: opacity > 0.85,
+    envMapIntensity: 0.7, // pick up a little sky so white never goes dull
   });
-  return mat;
 }
 
-/** Opaque-but-glassy surface for the city towers (cheap, no sorting headaches). */
-export function makeSolidGlass(tint: string, glow = 0.16): MeshStandardMaterial {
+/** Semi-gloss surface — floors and trim that catch a soft sheen of the sky. */
+export function makeGloss(tint: string, roughness = 0.28): MeshStandardMaterial {
+  return new MeshStandardMaterial({
+    color: new Color(tint),
+    roughness,
+    metalness: 0.0,
+    envMapIntensity: 1.2,
+  });
+}
+
+/** Bold accent (the ME red, blue, yellow) with a touch of glow so it pops. */
+export function makeAccent(tint: string, glow = 0.22): MeshStandardMaterial {
   const c = new Color(tint);
   return new MeshStandardMaterial({
     color: c,
-    roughness: 0.18,
+    roughness: 0.5,
     metalness: 0.0,
     emissive: c.clone().multiplyScalar(glow),
     emissiveIntensity: 1,
-    envMapIntensity: 1.2,
+    envMapIntensity: 0.6,
+  });
+}
+
+export interface GlassOptions {
+  tint?: string;
+  opacity?: number;
+  frost?: number;
+  doubleSided?: boolean;
+  envIntensity?: number;
+}
+
+/** Clean, clear window glass — slightly blue, reflective, barely frosted. */
+export function makeGlass(opts: GlassOptions = {}): MeshStandardMaterial {
+  const opacity = opts.opacity ?? CONFIG.mood.glassOpacity;
+  const frost = opts.frost ?? CONFIG.mood.frost;
+  return new MeshStandardMaterial({
+    color: new Color(opts.tint ?? '#dcefff'),
+    transparent: opacity < 0.98,
+    opacity,
+    roughness: 0.02 + frost * 0.5,
+    metalness: 0.0,
+    envMapIntensity: opts.envIntensity ?? 1.8,
+    side: opts.doubleSided ? DoubleSide : FrontSide,
+    depthWrite: opacity > 0.85,
   });
 }
 

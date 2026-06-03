@@ -1,9 +1,11 @@
 /**
- * The stylised glass city far below. Hundreds of towers, but a single
- * InstancedMesh = one draw call, so it stays VR-friendly. A seeded RNG keeps
- * the skyline identical every reload, and value-noise gives it a believable
- * downtown-to-suburbs falloff. A clearing under your tower lets you look
- * straight down into the void.
+ * The stylised white city far below — Mirror's Edge by way of instancing.
+ *
+ * Each visual layer (tower bodies, roof parapets, rooftop mechanical boxes,
+ * water towers) is its own InstancedMesh, so the whole skyline is a handful of
+ * draw calls. A seeded RNG keeps it identical every reload; value-noise gives a
+ * believable downtown-to-suburbs falloff; a clearing under your tower lets you
+ * look straight down into the void.
  */
 
 import {
@@ -11,82 +13,126 @@ import {
   Mesh,
   InstancedMesh,
   BoxGeometry,
+  CylinderGeometry,
+  ConeGeometry,
   CircleGeometry,
   Object3D,
   Color,
   FogExp2,
 } from '@iwsdk/core';
 import { CONFIG } from './config.js';
-import { makeSolidGlass, makeRng, valueNoise2D } from './glass.js';
+import { makeMatte, makeRng, valueNoise2D } from './glass.js';
+
+const P = CONFIG.palette;
+
+type Lot = { x: number; z: number; h: number; w: number; d: number; yaw: number; color: Color };
 
 export function buildCity(world: World): void {
-  const { seed, extent, spacing, clearing, maxHeight, minHeight, jitter } = CONFIG.city;
-  const base = -CONFIG.mood.altitude; // ground level of the city
-  const rng = makeRng(seed);
+  const c = CONFIG.city;
+  const base = -CONFIG.mood.altitude;
+  const rng = makeRng(c.seed);
   const noise = valueNoise2D(rng, 16);
-  const tints = CONFIG.palette.glassTints;
+  const white = new Color(P.white);
 
-  // First pass: collect lots so we know how many instances to allocate.
-  type Lot = { x: number; z: number; h: number; w: number; d: number; yaw: number; tint: Color };
+  // --- Pass 1: lay out the lots. ---
   const lots: Lot[] = [];
-  for (let x = -extent; x <= extent; x += spacing) {
-    for (let z = -extent; z <= extent; z += spacing) {
-      const r = Math.hypot(x, z);
-      if (r < clearing) continue; // keep the void under your feet
-      if (rng() < 0.12) continue; // random gaps = plazas / parks
+  for (let x = -c.extent; x <= c.extent; x += c.spacing) {
+    for (let z = -c.extent; z <= c.extent; z += c.spacing) {
+      if (Math.hypot(x, z) < c.clearing) continue; // void under your feet
+      if (rng() < 0.1) continue; // plazas / gaps
 
-      const px = x + (rng() - 0.5) * jitter;
-      const pz = z + (rng() - 0.5) * jitter;
-
-      // Skyline: noise^1.6 makes most buildings short with rare supertalls.
+      const px = x + (rng() - 0.5) * c.jitter;
+      const pz = z + (rng() - 0.5) * c.jitter;
       const n = noise(px / 90 + 8, pz / 90 + 8);
-      // Downtown bump: a soft cluster of very tall towers off-centre.
-      const downtown = Math.exp(-((px - 60) ** 2 + (pz + 40) ** 2) / (140 * 140));
-      const h = minHeight + Math.pow(n, 1.6) * (maxHeight - minHeight) + downtown * 70;
+      const downtown = Math.exp(-((px - 70) ** 2 + (pz + 50) ** 2) / (150 * 150));
+      const h = c.minHeight + Math.pow(n, 1.6) * (c.maxHeight - c.minHeight) + downtown * 60;
+      const w = c.spacing * (0.5 + rng() * 0.28);
+      const d = c.spacing * (0.5 + rng() * 0.28);
+      const yaw = (rng() - 0.5) * 0.18;
 
-      const w = spacing * (0.45 + rng() * 0.3);
-      const d = spacing * (0.45 + rng() * 0.3);
-      const yaw = (rng() - 0.5) * 0.25;
-
-      // Mostly soft pastel glass; a few lit toward the accent for night windows.
-      const tint = new Color(tints[(rng() * tints.length) | 0]);
-      if (rng() < 0.15) tint.lerp(new Color(CONFIG.palette.accent), 0.5);
-
-      lots.push({ x: px, z: pz, h, w, d, yaw, tint });
+      // Mostly white with faint variation; a sparse few painted a bold accent.
+      let color: Color;
+      if (rng() < c.accentChance) {
+        color = new Color(P.accents[(rng() * P.accents.length) | 0]);
+      } else {
+        color = white.clone().multiplyScalar(0.9 + rng() * 0.1);
+      }
+      lots.push({ x: px, z: pz, h, w, d, yaw, color });
     }
   }
 
-  // Build the instanced towers.
-  const geo = new BoxGeometry(1, 1, 1);
-  const mat = makeSolidGlass('#ffffff', 0.14);
-  const towers = new InstancedMesh(geo, mat, lots.length);
   const dummy = new Object3D();
-  for (let i = 0; i < lots.length; i++) {
-    const lot = lots[i];
-    dummy.position.set(lot.x, base + lot.h / 2, lot.z);
-    dummy.scale.set(lot.w, lot.h, lot.d);
-    dummy.rotation.y = lot.yaw;
+  const setTRS = (x: number, y: number, z: number, sx: number, sy: number, sz: number, yaw = 0) => {
+    dummy.position.set(x, y, z);
+    dummy.scale.set(sx, sy, sz);
+    dummy.rotation.set(0, yaw, 0);
     dummy.updateMatrix();
-    towers.setMatrixAt(i, dummy.matrix);
-    towers.setColorAt(i, lot.tint);
-  }
-  towers.instanceMatrix.needsUpdate = true;
-  if (towers.instanceColor) towers.instanceColor.needsUpdate = true;
-  // The city never moves; skip per-frame frustum recompute.
-  towers.frustumCulled = false;
-  world.createTransformEntity(towers);
+    return dummy.matrix;
+  };
 
-  // Ground plane the city sits on, so there's no infinite void below it.
-  const ground = new Mesh(
-    new CircleGeometry(extent * 1.6, 64),
-    makeSolidGlass('#2a2540', 0.0),
-  );
+  // --- Layer 1: tower bodies. ---
+  const bodies = new InstancedMesh(new BoxGeometry(1, 1, 1), makeMatte(P.white, 0.78), lots.length);
+  lots.forEach((lot, i) => {
+    bodies.setMatrixAt(i, setTRS(lot.x, base + lot.h / 2, lot.z, lot.w, lot.h, lot.d, lot.yaw));
+    bodies.setColorAt(i, lot.color);
+  });
+  bodies.instanceMatrix.needsUpdate = true;
+  if (bodies.instanceColor) bodies.instanceColor.needsUpdate = true;
+  bodies.frustumCulled = false;
+  world.createTransformEntity(bodies);
+
+  // --- Layer 2: roof parapets (a light-grey slab that defines every rooftop). ---
+  const parapets = new InstancedMesh(new BoxGeometry(1, 1, 1), makeMatte(P.roof, 0.7), lots.length);
+  lots.forEach((lot, i) => {
+    parapets.setMatrixAt(i, setTRS(lot.x, base + lot.h + 0.6, lot.z, lot.w + 0.6, 1.2, lot.d + 0.6, lot.yaw));
+  });
+  parapets.instanceMatrix.needsUpdate = true;
+  parapets.frustumCulled = false;
+  world.createTransformEntity(parapets);
+
+  // --- Layer 3: rooftop mechanical boxes (only on the taller buildings). ---
+  const mechLots = lots.filter((l) => l.h > c.minHeight + 30 && rng() < 0.7);
+  if (mechLots.length) {
+    const mech = new InstancedMesh(new BoxGeometry(1, 1, 1), makeMatte(P.roof, 0.75), mechLots.length);
+    mechLots.forEach((lot, i) => {
+      const mw = lot.w * (0.3 + rng() * 0.25);
+      const md = lot.d * (0.3 + rng() * 0.25);
+      const mh = 2 + rng() * 4;
+      mech.setMatrixAt(i, setTRS(lot.x, base + lot.h + 1.2 + mh / 2, lot.z, mw, mh, md, lot.yaw));
+    });
+    mech.instanceMatrix.needsUpdate = true;
+    mech.frustumCulled = false;
+    world.createTransformEntity(mech);
+  }
+
+  // --- Layer 4: iconic water towers on a sparse handful of roofs. ---
+  const towerLots = lots.filter(() => rng() < c.waterTowerChance);
+  if (towerLots.length) {
+    const tankMat = makeMatte('#c9cfd6', 0.75);
+    const tanks = new InstancedMesh(new CylinderGeometry(1, 1, 1, 12), tankMat, towerLots.length);
+    const roofs = new InstancedMesh(new ConeGeometry(1, 1, 12), makeMatte(P.roof, 0.7), towerLots.length);
+    towerLots.forEach((lot, i) => {
+      const r = 1.4 + rng() * 0.8;
+      const th = 2.6 + rng() * 1.4;
+      const y = base + lot.h + 1.2 + th / 2;
+      tanks.setMatrixAt(i, setTRS(lot.x, y, lot.z, r, th, r));
+      roofs.setMatrixAt(i, setTRS(lot.x, y + th / 2 + r * 0.4, lot.z, r * 1.1, r * 0.9, r * 1.1));
+    });
+    tanks.instanceMatrix.needsUpdate = true;
+    roofs.instanceMatrix.needsUpdate = true;
+    tanks.frustumCulled = false;
+    roofs.frustumCulled = false;
+    world.createTransformEntity(tanks);
+    world.createTransformEntity(roofs);
+  }
+
+  // --- Ground the city sits on. ---
+  const ground = new Mesh(new CircleGeometry(c.extent * 1.6, 64), makeMatte(P.concrete, 0.9));
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = base;
   world.createTransformEntity(ground);
 
-  // Atmospheric haze: fades the far skyline into the sunset horizon colour.
-  const fogColor = new Color(CONFIG.sky.horizon).lerp(new Color(CONFIG.sky.top), 0.35);
-  const density = 0.0011 + CONFIG.mood.haze * 0.0014;
-  world.scene.fog = new FogExp2(fogColor.getHex(), density);
+  // --- Light, crisp haze fading the far skyline into the bright horizon. ---
+  const fogColor = new Color(CONFIG.sky.horizon);
+  world.scene.fog = new FogExp2(fogColor.getHex(), 0.0004 + CONFIG.mood.haze * 0.0006);
 }
