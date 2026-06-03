@@ -27,14 +27,14 @@ export const CONFIG = {
     top: '#2f6fbf', // clean blue overhead
     horizon: '#e4f0fb', // bright, near-white haze band at the horizon
     bottom: '#cdd9e4', // pale below
-    intensity: 1.05,
+    intensity: 0.95,
   },
 
   /** Image-based lighting — bright, so white surfaces read crisp and clean. */
   ibl: {
     sky: '#eef5ff',
     ground: '#cfd6dc',
-    intensity: 1.5,
+    intensity: 1.35,
   },
 
   /** The Mirror's Edge palette. */

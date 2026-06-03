@@ -78,21 +78,13 @@ export function buildPenthouse(world: World): void {
   wall.position.y = wallHeight / 2;
   world.createTransformEntity(wall);
 
-  // --- White mullions around the glazing, with red conduits on a few. ---
+  // --- Clean white mullions around the glazing. ---
   const frames = new Group();
   for (let i = 0; i < columns; i++) {
     const a = (i / columns) * Math.PI * 2;
     const bar = new Mesh(new BoxGeometry(0.14, wallHeight, 0.14), trimMat);
     bar.position.set(Math.cos(a) * outerR, wallHeight / 2, Math.sin(a) * outerR);
     frames.add(bar);
-    if (i % 4 === 0) {
-      const pipe = new Mesh(
-        new CylinderGeometry(0.05, 0.05, wallHeight * 0.96, 12),
-        redMat,
-      );
-      pipe.position.set(Math.cos(a) * (outerR - 0.16), wallHeight / 2, Math.sin(a) * (outerR - 0.16));
-      frames.add(pipe);
-    }
   }
   shadow(frames, true, false);
   world.createTransformEntity(frames);
@@ -109,15 +101,6 @@ export function buildPenthouse(world: World): void {
   railing.position.y = 1.1;
   shadow(railing, true, false);
   world.createTransformEntity(railing);
-  // Thin vertical balusters under the railing.
-  const balusters = new Group();
-  for (let i = 0; i < columns * 2; i++) {
-    const a = (i / (columns * 2)) * Math.PI * 2;
-    const b = new Mesh(new BoxGeometry(0.04, 1.1, 0.04), redMat);
-    b.position.set(Math.cos(a) * (outerR - 0.05), 0.55, Math.sin(a) * (outerR - 0.05));
-    balusters.add(b);
-  }
-  world.createTransformEntity(balusters);
 
   // --- A red door frame on the back wall — classic ME wayfinding. ---
   const door = new Group();

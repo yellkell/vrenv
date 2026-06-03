@@ -60,7 +60,7 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, {
   // --- Bright, high-key rendering: ACES tone mapping + soft hard-edged shadows. ---
   const renderer = world.renderer;
   renderer.toneMapping = ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 0.92;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFSoftShadowMap;
 
