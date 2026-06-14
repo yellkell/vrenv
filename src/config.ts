@@ -1,7 +1,7 @@
 /**
- * One place to steer the whole vibe — now tuned to a Mirror's Edge aesthetic:
- * blinding clean white architecture, crisp midday sun, a huge bright sky, and
- * bold sparing hits of the signature red (with the odd blue / yellow).
+ * One place to steer the whole vibe — a papercraft western desert at golden
+ * hour: folded-paper dunes, layered red-rock mesas, saguaro cacti, and
+ * tumbleweeds rolling on the wind.
  *
  * You don't have to touch the geometry code. Almost every "feeling" of the
  * scene is a number in here. Change a value, save, the dev server hot-reloads.
@@ -10,71 +10,81 @@
 export const CONFIG = {
   /** Overall art direction. Tweak these first. */
   mood: {
-    /** How high above the city the rooftop floats, in meters (storeys ≈ this / 3). */
-    altitude: 200,
-    /** Window glass translucency. Low = clean, clear, barely-there glazing. */
-    glassOpacity: 0.12,
-    /** Frostiness of the glass. Mirror's Edge glass is clear, so keep this low. */
-    frost: 0.04,
-    /** Atmospheric haze. ME air is crisp and clear, so keep this small. */
-    haze: 0.16,
-    /** Render distance (meters). Must comfortably exceed altitude + city extent. */
-    viewDistance: 3000,
+    /** Sun height: 0 = on the horizon (long dramatic shadows), 1 = overhead. */
+    sunElevation: 0.22,
+    /** Brightness of the whole scene. */
+    exposure: 1.0,
+    /** Dusty warm haze that fades the far mesas into the horizon. */
+    haze: 0.5,
+    /** Render distance (meters). */
+    viewDistance: 1500,
   },
 
-  /** Sky gradient (a big inward-facing dome). Bright clean daylight blue. */
+  /** Warm golden-hour sky gradient (a big inward-facing dome). */
   sky: {
-    top: '#2f6fbf', // clean blue overhead
-    horizon: '#e4f0fb', // bright, near-white haze band at the horizon
-    bottom: '#cdd9e4', // pale below
-    intensity: 0.95,
+    top: '#5f93cf', // warm daytime blue overhead
+    horizon: '#f6cf94', // golden dust band at the horizon
+    bottom: '#caa676', // sandy glow below
+    intensity: 1.0,
   },
 
-  /** Image-based lighting — bright, so white surfaces read crisp and clean. */
+  /** Image-based lighting — warm, so paper surfaces glow at golden hour. */
   ibl: {
-    sky: '#eef5ff',
-    ground: '#cfd6dc',
-    intensity: 1.35,
+    sky: '#ffe9c6',
+    ground: '#a98353',
+    intensity: 1.05,
   },
 
-  /** The Mirror's Edge palette. */
+  /** The construction-paper palette. */
   palette: {
-    white: '#eef1f4', // clean architectural white
-    structure: '#ffffff', // mullions, frames, trim (brightest white)
-    roof: '#d6dce2', // light grey roof slabs / parapets that catch the light
-    concrete: '#aeb6bd', // ground plane far below
-    red: '#e0352b', // THE Mirror's Edge red
-    blue: '#2f9bd6',
-    yellow: '#f4c026',
-    /** Colours a small minority of buildings get painted. Mostly white city. */
-    accents: ['#e0352b', '#2f9bd6', '#f4c026'],
+    sandLight: '#e8c992', // dune tops
+    sandDark: '#cda86e', // dune hollows
+    sun: '#ffdf8a',
+    /** Layered mesa / rock colours, from base to cap (cardstock strata). */
+    rockStrata: ['#a85638', '#c06b41', '#cf8350', '#b85a3a', '#9d4a30'],
+    boulder: ['#bd7048', '#a9603c', '#caa06a'],
+    cactus: '#6f9a5b',
+    cactusDark: '#5b8049',
+    flower: '#ec6a86',
+    tumbleweed: ['#b59257', '#9a7842', '#caa978'],
+    wood: '#875432',
+    bone: '#ece2cb',
   },
 
-  /** The rooftop room you start inside. */
-  room: {
-    radius: 7.5, // interior radius (meters)
-    wallHeight: 3.6,
-    ringWidth: 1.6, // width of the see-through glass floor band at the windows
-    columns: 16, // evenly spaced white mullions around the glass wall
+  /** The folded-paper ground. */
+  terrain: {
+    seed: 23,
+    size: 240, // width of the desert (meters)
+    segments: 56, // facet density (lower = chunkier paper folds)
+    duneHeight: 3.2, // dune amplitude
+    flatRadius: 14, // level clearing around where you start
   },
 
-  /** The stylised white cityscape far below. */
-  city: {
-    seed: 11,
-    extent: 360, // half-width of the city grid (meters)
-    spacing: 18, // distance between building lots
-    clearing: 80, // empty radius directly under you (so you see straight down)
-    maxHeight: 155, // tallest downtown towers
-    minHeight: 18,
-    jitter: 4, // random lot offset so the grid doesn't look perfect
-    accentChance: 0.12, // fraction of buildings painted a bold accent colour
-    waterTowerChance: 0.06, // fraction of roofs that get an iconic water tower
+  /** Scattered boulders + the big horizon mesas. */
+  rocks: {
+    boulders: 64,
+    mesas: 7,
+    mesaRingMin: 70, // mesas live out toward the horizon
+    mesaRingMax: 112,
   },
 
-  /** Floating grab-able objects scattered around the room (ME-red cubes). */
+  /** Cacti. */
+  cacti: {
+    saguaro: 11, // the tall armed ones
+    barrel: 8, // short round ones
+    pricklyPear: 7, // stacked pads
+    clearRadius: 9, // keep them away from your feet
+  },
+
+  /** The rolling plants. Wind blows them mostly along +X. */
+  tumbleweeds: {
+    count: 9,
+    windSpeed: 2.6,
+    radius: 0.55,
+  },
+
+  /** Grab-able paper rocks you can pick up and toss. */
   decor: {
-    cubes: 8,
-    bobAmplitude: 0.06, // how far they bob up/down (meters)
-    bobSpeed: 0.8,
+    grabRocks: 5,
   },
 } as const;

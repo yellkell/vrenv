@@ -41,7 +41,7 @@
   }
 </style>
 <div class="panel-container">
-  <span class="heading"> Mirror's Edge Heights </span>
-  <span class="sub-heading"> A clean white rooftop high above the city. Follow the red stripe to the windows and look down. Grab the floating red cubes. Put the headset on and enter XR to feel the drop.</span>
+  <span class="heading"> Paper Frontier </span>
+  <span class="sub-heading"> A papercraft western desert at golden hour. Wander the folded-paper dunes, watch the tumbleweeds roll past the cacti and mesas, and pick up the little paper rocks. Put the headset on and enter XR.</span>
   <button id="xr-button">Enter XR</button>
 </div>

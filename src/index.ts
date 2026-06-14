@@ -1,13 +1,9 @@
 /**
- * Mirror's Edge Heights — a clean white rooftop room high above a bright,
- * crisp city, with the signature red accents and the signature vertigo.
+ * Paper Frontier — a papercraft western desert at golden hour.
  *
- * You start inside a white glass-walled room. Turn, follow the red stripe to
- * the windows, step onto the see-through floor band... and the drop to the
- * gleaming city far below hits you.
- *
- * The detailed, intricate stuff is generated procedurally (city.ts /
- * penthouse.ts). To restyle the whole place, edit numbers in config.ts.
+ * Folded-paper dunes, layered red-rock mesas on the horizon, saguaro cacti, and
+ * tumbleweeds rolling past on the wind. Walk around; pick up the little paper
+ * rocks. To restyle the whole place, edit numbers in config.ts.
  */
 
 import {
@@ -15,6 +11,8 @@ import {
   SessionMode,
   Vector3,
   Color,
+  Mesh,
+  CircleGeometry,
   DirectionalLight,
   AmbientLight,
   ACESFilmicToneMapping,
@@ -27,13 +25,13 @@ import {
 } from '@iwsdk/core';
 
 import { CONFIG } from './config.js';
-import { hexToVec4 } from './glass.js';
-import { buildPenthouse } from './penthouse.js';
-import { buildCity } from './city.js';
-import { buildDecor } from './decor.js';
+import { hexToVec4, makePaperDouble } from './paper.js';
+import { buildTerrain } from './terrain.js';
+import { buildBoulders, buildMesas, buildGrabRocks } from './rocks.js';
+import { buildCacti } from './cactus.js';
+import { buildTumbleweeds, TumbleweedSystem } from './tumbleweed.js';
+import { buildProps } from './props.js';
 import { PanelSystem } from './panel.js';
-import { FloatSystem } from './floating.js';
-import { SpinSystem } from './spin.js';
 
 World.create(document.getElementById('scene-container') as HTMLDivElement, {
   xr: {
@@ -42,12 +40,9 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, {
     features: { handTracking: true, layers: true },
   },
   render: {
-    // The city is ~200m down and stretches hundreds of metres out — the
-    // default 200m far plane was clipping almost all of it.
     far: CONFIG.mood.viewDistance,
     near: 0.1,
-    // We supply our own sky + IBL below, so skip IWSDK's default gradient.
-    defaultLighting: false,
+    defaultLighting: false, // we supply our own sky + IBL below
   },
   features: {
     locomotion: { useWorker: true },
@@ -57,19 +52,19 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, {
     environmentRaycast: false,
   },
 }).then((world) => {
-  // --- Bright, high-key rendering: ACES tone mapping + soft hard-edged shadows. ---
+  // --- Warm golden-hour rendering with long, soft-edged shadows. ---
   const renderer = world.renderer;
   renderer.toneMapping = ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.92;
+  renderer.toneMappingExposure = CONFIG.mood.exposure;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFSoftShadowMap;
 
-  // --- Camera: start facing the centerpiece; the city reveal is all around. ---
+  // --- Camera: stand on the sand looking out across the desert. ---
   const { camera } = world;
-  camera.position.set(0, 1.6, 3.2);
-  camera.lookAt(new Vector3(0, 1.3, 0));
+  camera.position.set(0, 1.6, 0);
+  camera.lookAt(new Vector3(0, 1.5, -12));
 
-  // --- Sky + image-based lighting: bright clean daylight. On the level root. ---
+  // --- Sky + image-based lighting (warm dusty daylight). On the level root. ---
   const root = world.activeLevel.value;
   root.addComponent(DomeGradient, {
     sky: hexToVec4(CONFIG.sky.top),
@@ -85,27 +80,43 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, {
     _needsUpdate: true,
   });
 
-  // --- A strong midday sun (casts the crisp ME shadows over the room) + fill. ---
-  const sun = new DirectionalLight(new Color('#fff7ea'), 2.2);
-  sun.position.set(14, 26, 10);
+  // --- The low golden sun: drives long shadows + a flat paper sun disc. ---
+  const e = CONFIG.mood.sunElevation * (Math.PI / 2);
+  const sunDir = new Vector3(0.35 * Math.cos(e), Math.sin(e), -0.94 * Math.cos(e)).normalize();
+
+  const sun = new DirectionalLight(new Color('#ffdca0'), 2.4);
+  sun.position.copy(sunDir).multiplyScalar(55);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.bias = -0.0004;
   const cam = sun.shadow.camera;
-  cam.near = 1;
-  cam.far = 80;
-  cam.left = cam.bottom = -14;
-  cam.right = cam.top = 14;
+  cam.near = 8;
+  cam.far = 140;
+  cam.left = cam.bottom = -42;
+  cam.right = cam.top = 42;
   cam.updateProjectionMatrix();
   world.createTransformEntity(sun);
 
-  const fill = new AmbientLight(new Color('#b9cee0'), 0.55);
-  world.createTransformEntity(fill);
+  world.createTransformEntity(new AmbientLight(new Color('#d8b38a'), 0.5));
+
+  // Stylised paper sun low on the horizon (with a fainter halo behind it).
+  const halo = new Mesh(new CircleGeometry(44, 36), makePaperDouble('#ffe7ad', 0.5));
+  halo.position.copy(sunDir).multiplyScalar(602);
+  halo.lookAt(0, halo.position.y, 0);
+  world.createTransformEntity(halo);
+  const disc = new Mesh(new CircleGeometry(26, 32), makePaperDouble(CONFIG.palette.sun, 1.1));
+  disc.position.copy(sunDir).multiplyScalar(600);
+  disc.lookAt(0, disc.position.y, 0);
+  world.createTransformEntity(disc);
 
   // --- The world itself. ---
-  buildPenthouse(world);
-  buildCity(world);
-  buildDecor(world);
+  buildTerrain(world);
+  buildMesas(world);
+  buildBoulders(world);
+  buildCacti(world);
+  buildProps(world);
+  buildTumbleweeds(world);
+  buildGrabRocks(world);
 
   // --- Welcome panel with the Enter/Exit XR button. ---
   const panel = world
@@ -113,7 +124,8 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, {
     .addComponent(PanelUI, { config: './ui/welcome.json', maxHeight: 0.7, maxWidth: 1.4 })
     .addComponent(Interactable)
     .addComponent(ScreenSpace, { top: '20px', left: '20px', height: '38%' });
-  panel.object3D!.position.set(0, 1.05, 2.2);
+  panel.object3D!.position.set(1.2, 1.3, -2.4);
+  panel.object3D!.lookAt(0, 1.6, 0);
 
-  world.registerSystem(PanelSystem).registerSystem(FloatSystem).registerSystem(SpinSystem);
+  world.registerSystem(PanelSystem).registerSystem(TumbleweedSystem);
 });

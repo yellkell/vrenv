@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - claude/vr-glassmorphic-environments-r7rCA
+      - claude/papercraft-desert
   workflow_dispatch:
 
 # Permissions the deploy needs.
