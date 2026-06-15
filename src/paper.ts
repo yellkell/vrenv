@@ -19,7 +19,7 @@ export function makePaper(hex: string, roughness = 0.97, flat = true): MeshStand
   });
 }
 
-/** Paper that's visible from both sides (cutout clouds, cactus pads, the sun). */
+/** Paper that's visible from both sides (cutout signs, blades, reflections). */
 export function makePaperDouble(hex: string, emissive = 0): MeshStandardMaterial {
   const c = new Color(hex);
   const mat = makePaper(hex);
@@ -27,6 +27,42 @@ export function makePaperDouble(hex: string, emissive = 0): MeshStandardMaterial
   if (emissive > 0) {
     mat.emissive = c.clone().multiplyScalar(emissive);
   }
+  return mat;
+}
+
+/**
+ * A glowing neon sheet: a near-black body that emits its own colour, so it
+ * reads as a lit sign / tube / window against the dark alley. `intensity`
+ * pushes it past 1 to bloom toward white at the core under ACES tone-mapping.
+ */
+export function makeNeon(hex: string, intensity = 2.4, doubleSide = false): MeshStandardMaterial {
+  const mat = new MeshStandardMaterial({
+    color: new Color('#08080b'),
+    emissive: new Color(hex),
+    emissiveIntensity: intensity,
+    roughness: 0.5,
+    metalness: 0.0,
+  });
+  if (doubleSide) mat.side = 2;
+  return mat;
+}
+
+/**
+ * A faint, additive "wet reflection" sheet for laying on the road under a sign.
+ * Self-lit, transparent, and doesn't write depth so it layers without z-fights.
+ */
+export function makeReflection(hex: string, intensity = 1.0, opacity = 0.5): MeshStandardMaterial {
+  const mat = new MeshStandardMaterial({
+    color: new Color('#000000'),
+    emissive: new Color(hex),
+    emissiveIntensity: intensity,
+    roughness: 1,
+    metalness: 0,
+    transparent: true,
+    opacity,
+    depthWrite: false,
+    side: 2,
+  });
   return mat;
 }
 
