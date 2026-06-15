@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - claude/papercraft-desert
+      - claude/cyberpunk-backstreet
   workflow_dispatch:
 
 # Permissions the deploy needs.
