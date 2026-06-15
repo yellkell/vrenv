@@ -229,11 +229,9 @@ function buildCablesAndLanterns(world: World, rng: () => number): void {
     }
   }
 
-  // Instanced glowing lanterns (warm, with the odd red one).
+  // Instanced glowing lanterns — warm amber strung along the wires.
   const n = lanternPts.length;
-  const mesh = new InstancedMesh(new IcosahedronGeometry(0.13, 0), makeNeon('#ffffff', 1.4), n);
-  const cWarm = new Color(P.neon.amber);
-  const cRed = new Color(P.neon.red);
+  const mesh = new InstancedMesh(new IcosahedronGeometry(0.13, 0), makeNeon(P.neon.amber, 1.6), n);
   for (let i = 0; i < n; i++) {
     const p = lanternPts[i];
     dummy.position.copy(p);
@@ -241,10 +239,8 @@ function buildCablesAndLanterns(world: World, rng: () => number): void {
     dummy.rotation.set(0, 0, 0);
     dummy.updateMatrix();
     mesh.setMatrixAt(i, dummy.matrix);
-    mesh.setColorAt(i, rng() < 0.25 ? cRed : cWarm);
   }
   mesh.instanceMatrix.needsUpdate = true;
-  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   world.createTransformEntity(mesh);
 }
 

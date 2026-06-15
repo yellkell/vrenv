@@ -67,7 +67,26 @@ export function makeReflection(hex: string, intensity = 1.0, opacity = 0.5): Mes
 }
 
 /**
- * Deterministic pseudo-random generator (mulberry32). Same seed → same desert
+ * A holographic advertising panel: a bright, see-through coloured pane that
+ * floats on a wall. Transparent and self-lit, and doesn't write depth so it
+ * layers like projected light rather than solid paper.
+ */
+export function makeHolo(hex: string, intensity = 1.4, opacity = 0.32): MeshStandardMaterial {
+  return new MeshStandardMaterial({
+    color: new Color('#000000'),
+    emissive: new Color(hex),
+    emissiveIntensity: intensity,
+    roughness: 1,
+    metalness: 0,
+    transparent: true,
+    opacity,
+    depthWrite: false,
+    side: 2,
+  });
+}
+
+/**
+ * Deterministic pseudo-random generator (mulberry32). Same seed → same alley
  * every reload, so the world feels like a real place instead of reshuffling.
  */
 export function makeRng(seed: number): () => number {

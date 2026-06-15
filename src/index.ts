@@ -31,6 +31,8 @@ import { buildStreet, ALLEY } from './street.js';
 import { buildBuildings } from './buildings.js';
 import { buildNeon, NeonSystem } from './neon.js';
 import { buildProps } from './props.js';
+import { buildDetail } from './detail.js';
+import { buildTraffic, TrafficSystem } from './traffic.js';
 import { buildWeather, WeatherSystem } from './weather.js';
 import { PanelSystem } from './panel.js';
 
@@ -109,6 +111,8 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, {
   buildBuildings(world);
   buildNeon(world);
   buildProps(world);
+  buildDetail(world);
+  buildTraffic(world);
   buildWeather(world);
 
   // --- Welcome panel with the Enter/Exit XR button. ---
@@ -120,5 +124,9 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, {
   panel.object3D!.position.set(1.3, 1.35, spawnZ + 2.5);
   panel.object3D!.lookAt(0, 1.6, spawnZ);
 
-  world.registerSystem(PanelSystem).registerSystem(NeonSystem).registerSystem(WeatherSystem);
+  world
+    .registerSystem(PanelSystem)
+    .registerSystem(NeonSystem)
+    .registerSystem(TrafficSystem)
+    .registerSystem(WeatherSystem);
 });

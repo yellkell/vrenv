@@ -1,8 +1,9 @@
 /**
  * One place to steer the whole vibe — a papercraft cyberpunk backstreet at
- * night: a narrow rain-slicked alley between towering buildings, walls plastered
- * with buzzing neon, steam curling up from the gratings, cables sagging
- * overhead. The far end opens onto a fogged megacity skyline.
+ * night: a narrow alley between towering buildings, walls crusted with neon,
+ * shop signs and windows blinking on and off, steam curling from the gratings,
+ * cables sagging overhead, and rows of flying cars streaking past above. The far
+ * end opens onto a fogged megacity skyline.
  *
  * You don't have to touch the geometry code. Almost every "feeling" of the
  * scene is a number in here. Change a value, save, the dev server hot-reloads.
@@ -71,6 +72,7 @@ export const CONFIG = {
     front: -30, // open end (z) — skyline lies beyond
     back: 30, // dead-end (z) with the hero sign
     seed: 71,
+    clearWidth: 1.3, // keep the centre path clear of ground clutter (±x)
   },
 
   /** The buildings that wall in the alley. */
@@ -103,33 +105,50 @@ export const CONFIG = {
 
   /** Neon signage stapled to the walls. */
   neon: {
-    signsPerSide: 9,
-    bladeChance: 0.4, // signs that jut out perpendicular into the alley
-    flickerChance: 0.32, // signs with a broken, buzzing flicker
+    signsPerSide: 14,
+    bladeChance: 0.42, // signs that jut out perpendicular into the alley
+    flickerChance: 0.26, // signs with a broken, buzzing flicker
+    toggleChance: 0.4, // of the rest, signs that switch fully on/off over time
+    holoBillboards: 4, // big translucent holographic ads on the walls
+  },
+
+  /** Rows of flying cars streaking past overhead, from different directions. */
+  traffic: {
+    cars: 22,
+    minSpeed: 7,
+    maxSpeed: 16,
+  },
+
+  /** Dense wall + edge set-dressing (kept off the centre path). */
+  detail: {
+    wallBoxes: 46, // junction boxes / meters / vents bolted to walls
+    posters: 34, // pasted bills + graffiti
+    dishes: 9, // satellite dishes
+    drainpipes: 10,
+    balconies: 7,
+    vending: 5, // glowing vending machines
+    monitors: 10, // wall screens that blink on/off
+    festoon: 60, // strings of little bulbs along the walls
+    bollards: 10,
+    cones: 8,
+    manholes: 6,
+    toggleWindows: 40, // extra feature windows that switch on/off over time
   },
 
   /** Street clutter. */
   props: {
-    crates: 16,
-    barrels: 9,
-    toxicBarrels: 3, // the ones glowing green
-    trashBags: 14,
-    lanterns: 18, // strung paper lanterns / bulbs
-    cables: 7, // wires sagging across the alley
-    grab: 5, // glowing things you can pick up
-  },
-
-  /** Falling rain confined to the alley volume. */
-  rain: {
-    count: 300,
-    speed: 24,
-    color: '#adbfe0',
-    slant: 0.12,
+    crates: 22,
+    barrels: 14,
+    toxicBarrels: 4, // the ones glowing green
+    trashBags: 22,
+    lanterns: 26, // strung paper lanterns / bulbs
+    cables: 10, // wires sagging across the alley
+    grab: 6, // glowing things you can pick up
   },
 
   /** Steam rising from the street gratings. */
   steam: {
-    vents: 5,
+    vents: 6,
     puffsPerVent: 4,
   },
 } as const;
