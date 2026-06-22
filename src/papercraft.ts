@@ -21,7 +21,7 @@ import {
   Object3D,
 } from 'three';
 
-export type Paint = number | string;
+export type Paint = number | string | Color;
 
 export interface PaperOptions {
   roughness?: number;
@@ -98,4 +98,37 @@ export function group(...children: Object3D[]): Group {
   const g = new Group();
   children.forEach((c) => g.add(c));
   return g;
+}
+
+// ----------------------------------------------------------------------------
+// Weathering helpers — for a grimy, dilapidated look
+// ----------------------------------------------------------------------------
+
+/** Deterministic seeded PRNG (mulberry32) so the decay is stable build-to-build. */
+export function makeRng(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Returns a grimier version of a color: darker, desaturated, and nudged toward
+ * rust. `amount` (0..1) controls how aggressive the decay is; `rng` adds
+ * per-call variation so neighbouring surfaces don't look uniform.
+ */
+export function weather(base: Paint, rng: () => number, amount = 0.3): Color {
+  const c = new Color(base);
+  const hsl = { h: 0, s: 0, l: 0 };
+  c.getHSL(hsl);
+  const t = rng();
+  hsl.l *= 1 - amount * (0.25 + 0.6 * t);
+  hsl.s *= 1 - amount * 0.55;
+  const rustHue = 0.06; // orange-brown
+  hsl.h += (rustHue - hsl.h) * amount * t * 0.5;
+  c.setHSL(hsl.h, Math.max(0, hsl.s), Math.max(0, hsl.l));
+  return c;
 }
