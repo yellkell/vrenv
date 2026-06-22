@@ -33,6 +33,17 @@ emulation (no headset required); on a Quest browser, hit **Enter XR**.
 
 Requires Node.js ≥ 20.19.
 
+## Deploy (GitHub Pages)
+
+A workflow at `.github/workflows/deploy.yml` builds the project and publishes
+`dist/` to GitHub Pages on every push to `main` (and to the working branch).
+
+One-time setup: in the repo, go to **Settings → Pages → Build and deployment**
+and set **Source** to **GitHub Actions**. The site is then served at
+`https://<owner>.github.io/vrenv/`. Vite's `base: './'` (in `vite.config.ts`)
+keeps asset paths relative so it works under that subpath. WebXR/immersive mode
+needs HTTPS, which GitHub Pages provides.
+
 ## Project layout
 
 ```
