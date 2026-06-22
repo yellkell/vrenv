@@ -5,8 +5,8 @@
     width: 52;
     display: flex;
     flex-direction: column;
-    background-color: #2b1a0e;
-    border-color: #c9a44a;
+    background-color: #23272c;
+    border-color: #e0b016;
     border-width: 0.2;
     border-radius: 2;
   }
@@ -14,13 +14,13 @@
   .heading {
     font-size: 4.5;
     font-weight: medium;
-    color: #f4e4bf;
+    color: #f3f5f7;
     text-align: left;
   }
 
   .sub-heading {
     font-size: 2;
-    color: #d8c39a;
+    color: #b8c0c6;
     text-align: left;
     margin-top: 0.4;
   }
@@ -29,11 +29,11 @@
     width: 100%;
     padding: 1.5;
     margin-top: 2;
-    background-color: #c9a44a;
-    color: #2b1a0e;
+    background-color: #e0b016;
+    color: #23272c;
     border-radius: 1.2;
     border-width: 0.1;
-    border-color: #f4e4bf;
+    border-color: #f3f5f7;
     font-size: 2.5;
     font-weight: medium;
     text-align: center;
@@ -41,11 +41,11 @@
   }
 </style>
 <div class="panel-container">
-  <span class="heading"> The Papercraft Saloon </span>
+  <span class="heading"> Papercraft Factory Floor </span>
   <span class="sub-heading">
-    Step into the arena. Walk the plank floor, swing through the batwing doors,
-    grab a bottle off the bar — a folded-paper Western set ready for your IWSDK
-    game.
+    Step onto the work floor. Walk the steel catwalk, trip the sliding bay
+    doors, and grab a wrench off the bench — a folded-paper industrial set
+    ready for your IWSDK game.
   </span>
   <button id="xr-button">Enter XR</button>
 </div>

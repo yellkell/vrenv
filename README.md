@@ -1,24 +1,27 @@
-# Papercraft Saloon Arena
+# Papercraft Factory Floor
 
-A big indoor **Western saloon arena** built for [IWSDK — the Immersive Web SDK](https://iwsdk.dev).
+A big indoor **industrial factory floor** built for [IWSDK — the Immersive Web SDK](https://iwsdk.dev).
 The entire set is folded out of flat-shaded, low-poly **papercraft** geometry, so
 it ships as plain TypeScript with **no external 3D assets** — clone, install, run.
 
-The middle of the room is a clear ~10 m **arena circle**, deliberately left empty
-so you can build a game (duels, brawls, sports, mini-games) on top of a finished,
-atmospheric environment.
+The middle of the room is a wide-open **work floor** (a 36 m × 36 m hall with a
+clear central zone marked by yellow safety lanes), deliberately left empty so you
+can build a game on top of a finished, atmospheric environment. A steel
+**catwalk / mezzanine** wraps three walls.
 
 ## What's in the scene
 
-- **Arena floor** – plank flooring with an inlaid worn circle and a brass sunburst emblem at center.
-- **Saloon shell** – cream-plaster + dark-wainscot walls, exposed ceiling beams, glowing dusk windows.
-- **Bar** – counter with brass foot rail, back-bar mirror, and two shelves of faceted bottles.
-- **Balcony / mezzanine** – wraps three walls with railings, support posts, and a staircase.
-- **Stage** – raised platform with a papercraft upright piano and stool.
-- **Furniture** – poker tables (green felt), stools, and barrels pushed to the edges.
-- **Chandeliers** – hanging fixtures that carry the warm key lighting.
-- **Batwing doors** – swing open as you approach the entrance and settle closed behind you (`BatwingSystem`).
-- **Grabbable props** – a whiskey bottle, a glass, a stack of poker chips, and a sheriff's badge (distance-grabbable).
+- **Work floor** – two-tone concrete bays, painted safety lanes, hazard chevrons by the doors, and a steel gear emblem at center.
+- **Factory shell** – ribbed metal cladding, a clerestory window band, roof trusses under a deck, and steel I-beam columns.
+- **Catwalk / mezzanine** – grating decks on three walls with yellow handrails, toe boards, support brackets, and a switchback stair (the "balcony", industrial-style).
+- **Conveyors** – belt frames with rollers, legs, and crates riding along.
+- **Machines** – bodies with control panels, screens, indicator buttons, and stack lights.
+- **Pallet racking** – multi-bay uprights and beams loaded with crates.
+- **Clutter** – crate/pallet stacks and clusters of oil drums.
+- **Gantry crane** – a bridge girder on end trucks with a trolley and hook block, riding rails over the floor.
+- **Pipework & high-bay lights** – wall pipe runs plus hanging high-bay fixtures carrying the cool key lighting.
+- **Sliding bay doors** – two leaves that slide open as you approach and glide shut behind you (`BayDoorSystem`).
+- **Grabbable props** – a wrench, a gear, a hard hat, a crate, and an oil drum (distance-grabbable).
 - **Welcome panel** – spatial UI with an Enter/Exit XR button.
 
 ## Run it
@@ -36,13 +39,9 @@ Requires Node.js ≥ 20.19.
 ## Deploy (GitHub Pages)
 
 A workflow at `.github/workflows/deploy.yml` builds the project and publishes
-`dist/` to GitHub Pages on every push to `main` (and to the working branch).
-
-One-time setup: in the repo, go to **Settings → Pages → Build and deployment**
-and set **Source** to **GitHub Actions**. The site is then served at
-`https://<owner>.github.io/vrenv/`. Vite's `base: './'` (in `vite.config.ts`)
-keeps asset paths relative so it works under that subpath. WebXR/immersive mode
-needs HTTPS, which GitHub Pages provides.
+`dist/` to GitHub Pages on every push to `main`. Vite's `base: './'` keeps asset
+paths relative so it works under the `https://<owner>.github.io/vrenv/` subpath.
+WebXR/immersive mode needs HTTPS, which GitHub Pages provides.
 
 ## Project layout
 
@@ -51,21 +50,22 @@ index.html            # mounts #scene-container and loads src/index.ts
 vite.config.ts        # IWSDK dev plugin + UIKitML compiler + mkcert
 src/
   index.ts            # World.create(), camera, registers systems
-  saloon.ts           # buildSaloon(world): all geometry, lights, doors, props
+  factory.ts          # buildFactory(world): all geometry, lights, doors, props
   papercraft.ts       # flat-shaded "folded paper" material/primitive helpers
-  doors.ts            # Batwing component + BatwingSystem (proximity swing)
+  doors.ts            # BayDoor component + BayDoorSystem (proximity slide)
   panel.ts            # wires the welcome panel's Enter/Exit XR button
 ui/welcome.uikitml    # spatial UI template (compiled to public/ui/welcome.json)
 ```
 
 ## Building your game on top
 
-`buildSaloon(world)` is self-contained. In `src/index.ts`, after it runs, add
-your own entities/systems. Keep gameplay actors inside the central arena circle
-(radius ≈ 5 m, centered at the origin); furniture and props already avoid it.
+`buildFactory(world)` is self-contained. In `src/index.ts`, after it runs, add
+your own entities/systems. Keep gameplay actors inside the central work zone
+(roughly a 18 m square centered on the origin); equipment and props already
+avoid it.
 
 ## Tweaking the look
 
-Geometry sizes live in the `ROOM` / `DOOR` / `ARENA_RADIUS` constants and the
-`C` color palette at the top of `src/saloon.ts`. The papercraft feel comes from
+Geometry sizes live in the `ROOM` / `BAY` / `WORK_HALF` constants and the `C`
+color palette at the top of `src/factory.ts`. The papercraft feel comes from
 `flatShading` plus low cylinder segment counts — see `src/papercraft.ts`.

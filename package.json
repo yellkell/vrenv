@@ -1,9 +1,9 @@
 {
-  "name": "papercraft-saloon-arena",
+  "name": "papercraft-factory-floor",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "A papercraft-styled Western saloon arena scene for IWSDK (Immersive Web SDK) games.",
+  "description": "A papercraft-styled industrial factory floor scene for IWSDK (Immersive Web SDK) games.",
   "scripts": {
     "dev": "iwsdk dev up --open --foreground",
     "dev:runtime": "vite",
