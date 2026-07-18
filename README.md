@@ -28,16 +28,16 @@ genuinely reflective glass vault, oak plank decking around a sunken acrylic
 court (painted — lines, service boxes, wear and all — into a single baked
 texture), a sagging woven net, wood-and-steel benches, printed fabric
 banners, concrete planters with leafy shrubs, and an LED scoreboard. Outside
-the glazing: a lawn, alpha-card trees, hazy mountains with snow caps, and
-drifting cloud billboards. Grab a paddle and ball down on the court.
+the glazing: a lawn, volumetric leaf-clump trees, one continuous hazy
+mountain range on the horizon, and drifting cloud billboards. Grab a paddle and ball down on the court.
 
 ## Lantern Cove (`?env=cove`)
 
 Golden hour on a lake island. A noise-displaced terrain mesh with a baked
 meadow-to-shore splat and 3D grass tufts; still water whose scrolling ripple
 normals reflect a physical sunset sky (the glitter path comes out of the
-environment map, not paint); a dock running straight at the sun; bough-card
-pines; a live scrolling waterfall; striped-fabric hot-air balloons; and
+environment map, not paint); a dock running straight at the sun;
+volumetric pines; a live scrolling waterfall; striped-fabric balloons; and
 lantern pools plus a flickering fire pit as the light fades. Grabbable carry
 lantern, oar, and skipping stone.
 
@@ -51,7 +51,7 @@ wrench, gear, hard hat, crate, and drum.
 ## How the realistic style works (with zero assets)
 
 - **Procedural textures** (`src/textures.ts`): every material — oak planks,
-  sport acrylic, terrain splat, bark, foliage/pine alpha cards, cloud
+  sport acrylic, terrain splat, bark, tiling leafage and needles, cloud
   billboards, banner art, the scoreboard — is painted into an offscreen
   canvas at load, with normal maps derived from painted height via a Sobel
   pass and roughness maps for PBR response.
@@ -69,11 +69,12 @@ wrench, gear, hard hat, crate, and drum.
 ## Quest 3 performance
 
 Both styles budget the same way: merged static geometry (papercraft via
-`mergeStatic`, realistic via per-material `mergeGeometries` batches — trees
-collapse to two draw calls, mountains to one), a few dozen draw calls per
-scene, one directional light plus hemisphere fill, at most three point
-lights, alpha *testing* instead of alpha blending for foliage, fog for depth,
-and no per-frame shadow rendering. Locomotion gets its own invisible low-poly
+`mergeStatic`, realistic via per-material `mergeGeometries` batches — whole
+forests collapse to two draw calls, the entire mountain range to one mesh
+from `src/nature.ts`), a few dozen draw calls per scene, one directional
+light plus hemisphere fill, at most three point lights, opaque displaced
+geometry for tree canopies (stereo-correct, no alpha sorting), fog for
+depth, and no per-frame shadow rendering. Locomotion gets its own invisible low-poly
 nav group (indexed geometry only, which the IWSDK locomotor requires) instead
 of colliding against the full visual set; the realistic environments reuse
 the exact nav meshes exported by their papercraft twins.
@@ -113,6 +114,7 @@ src/
     cove.ts                 # Lantern Cove (papercraft) + nav mesh
   factory.ts                # Papercraft Factory Floor
   textures.ts               # procedural canvas textures (realistic style)
+  nature.ts                 # mountain-range ring + volumetric tree builders
   realism.ts                # sky shader, PMREM env baking, shadows, TickSystem
   papercraft.ts             # flat-shaded primitives, gradients, RNG helpers
   merge.ts                  # static-geometry merge pass (draw-call collapse)

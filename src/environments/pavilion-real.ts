@@ -43,6 +43,7 @@ import {
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Drifter } from '../drift.js';
+import { leafClump, leafyTree, mountainRange } from '../nature.js';
 import { applyRealismRenderer, bakeEnvironment, skyDome, type SkySpec } from '../realism.js';
 import {
   bannerArt,
@@ -50,12 +51,11 @@ import {
   cloudCard,
   concreteTexture,
   courtTexture,
-  foliageCard,
   grassTexture,
+  leafage,
   muralWall,
   netWeave,
   paintedMetal,
-  rockTexture,
   screenArt,
   srand,
   woodPlanks,
@@ -124,7 +124,7 @@ export function buildPavilionReal(world: World): void {
   srand(0x51ab);
   applyRealismRenderer(world, 1.05);
   bakeEnvironment(world, SKY, 0.9);
-  world.scene.fog = new Fog('#d8e9f0', 90, 320);
+  world.scene.fog = new Fog('#d8e9f0', 120, 400);
 
   const env = new Group();
   env.name = 'SportsPavilionReal';
@@ -530,19 +530,19 @@ function buildFurnishings(env: Group): void {
   env.add(mergeInto(slatMat, woodParts));
   env.add(mergeInto(frameMat, steelParts));
 
-  // Concrete planters with leafy shrubs (alpha-card foliage).
+  // Concrete planters with clumpy geometric shrubs.
   const conc = concreteTexture();
   const planterMat = new MeshStandardMaterial({
     map: conc.map,
     normalMap: conc.normalMap,
     roughness: 0.95,
   });
-  const leaves = foliageCard('#28511e', '#78b23e');
+  const bushLeaf = leafage('#26451d', '#7cb23e');
   const bushMat = new MeshStandardMaterial({
-    map: leaves,
-    alphaTest: 0.28,
-    side: DoubleSide,
-    roughness: 0.9,
+    map: bushLeaf.map,
+    roughnessMap: bushLeaf.roughnessMap,
+    roughness: 1,
+    vertexColors: true,
   });
   const planters: Mesh[] = [];
   const bushes: Mesh[] = [];
@@ -552,12 +552,9 @@ function buildFurnishings(env: Group): void {
     planters.push(box);
     for (let i = 0; i < 3; i++) {
       const bx = x - 0.5 + i * 0.5;
-      for (let k = 0; k < 3; k++) {
-        const card = new Mesh(new PlaneGeometry(0.75, 0.62), bushMat);
-        card.position.set(bx + rand(-0.06, 0.06), 0.78, z + rand(-0.06, 0.06));
-        card.rotation.y = (k / 3) * Math.PI + rand(-0.2, 0.2);
-        bushes.push(card);
-      }
+      bushes.push(
+        leafClump(bx + rand(-0.05, 0.05), 0.66, z + rand(-0.05, 0.05), rand(0.2, 0.3), rand),
+      );
     }
   };
   planterAt(-6, -16.35);
@@ -671,39 +668,26 @@ function buildBackdrop(env: Group): void {
   }
   env.add(mergeInto(apronMat, aprons, false));
 
-  // Trees: bark trunks + crossed foliage cards, merged into two draw calls.
+  // Trees: bark trunks + volumetric displaced leaf-clump canopies.
   const bark = barkTexture();
   const trunkMat = new MeshStandardMaterial({
     map: bark.map,
     normalMap: bark.normalMap,
     roughness: 1,
   });
-  const leafTex = foliageCard('#2b5820', '#8fc24e');
+  const leaf = leafage('#274a1e', '#8cc24a');
   const leafMat = new MeshStandardMaterial({
-    map: leafTex,
-    alphaTest: 0.28,
-    side: DoubleSide,
-    roughness: 0.9,
+    map: leaf.map,
+    roughnessMap: leaf.roughnessMap,
+    roughness: 1,
+    vertexColors: true,
   });
   const trunks: Mesh[] = [];
   const canopies: Mesh[] = [];
   const treeAt = (x: number, z: number, s: number) => {
-    const trunk = new Mesh(new CylinderGeometry(0.09 * s, 0.16 * s, 1.6 * s, 8), trunkMat);
-    trunk.position.set(x, 0.8 * s - 0.35, z);
-    trunk.rotation.y = rand(0, Math.PI);
-    trunks.push(trunk);
-    const size = 2.6 * s;
-    for (let k = 0; k < 3; k++) {
-      const card = new Mesh(new PlaneGeometry(size, size * 0.88), leafMat);
-      card.position.set(x, 1.7 * s + size * 0.3 - 0.35, z);
-      card.rotation.y = (k / 3) * Math.PI + rand(-0.25, 0.25);
-      canopies.push(card);
-    }
-    const top = new Mesh(new PlaneGeometry(size * 0.9, size * 0.9), leafMat);
-    top.position.set(x, 1.7 * s + size * 0.52 - 0.35, z);
-    top.rotation.x = -Math.PI / 2;
-    top.rotation.z = rand(0, Math.PI);
-    canopies.push(top);
+    const parts = leafyTree(x, -0.35, z, s, rand);
+    trunks.push(...parts.trunk);
+    canopies.push(...parts.canopy);
   };
   for (let i = 0; i < 22; i++) {
     const a = rand(0, Math.PI * 2);
@@ -711,62 +695,30 @@ function buildBackdrop(env: Group): void {
     const x = Math.sin(a) * r;
     const z = Math.cos(a) * r;
     if (Math.abs(x) < HALL.hx + 5 && Math.abs(z) < HALL.hz + 5) continue;
-    treeAt(x, z, rand(0.8, 1.9));
+    treeAt(x, z, rand(0.8, 1.7));
   }
   for (let i = 0; i < 9; i++) {
-    treeAt(rand(-26, 26), -HALL.hz - rand(7, 26), rand(1.1, 2.1));
+    treeAt(rand(-26, 26), -HALL.hz - rand(7, 26), rand(1.0, 1.9));
   }
   env.add(mergeInto(trunkMat, trunks));
   const canopyMesh = mergeInto(leafMat, canopies);
   canopyMesh.castShadow = true;
   env.add(canopyMesh);
 
-  // Mountains: noise-displaced cones, rock texture, snow tint by height.
-  const rock = rockTexture();
-  rock.map.repeat.set(6, 3);
-  rock.normalMap!.repeat.set(6, 3);
-  const mountainMat = new MeshStandardMaterial({
-    map: rock.map,
-    normalMap: rock.normalMap,
-    roughness: 1,
-    vertexColors: true,
-  });
-  const mountains: Mesh[] = [];
-  for (let i = 0; i < 9; i++) {
-    const a = (i / 9) * Math.PI * 2 + 0.35;
-    const r = rand(190, 260);
-    const height = rand(42, 72);
-    const base = rand(50, 85);
-    const geom = new CylinderGeometry(1.5, base, height, 24, 6);
-    const p = geom.getAttribute('position');
-    const colors = new Float32Array(p.count * 3);
-    for (let v = 0; v < p.count; v++) {
-      const vx = p.getX(v);
-      const vz = p.getZ(v);
-      const vy = p.getY(v);
-      const ang = Math.atan2(vx, vz);
-      const ridge = Math.sin(ang * 5 + i) * 0.16 + Math.sin(ang * 11 + i * 2) * 0.07;
-      p.setX(v, vx * (1 + ridge));
-      p.setZ(v, vz * (1 + ridge));
-      const hFrac = (vy + height / 2) / height;
-      const snow = Math.max(0, (hFrac - 0.6) * 2.4 + ridge * 0.5);
-      // Forested green skirts fading into grey rock, then snow.
-      const forest = Math.min(0.85, Math.max(0, 1 - hFrac * 1.6));
-      const tone = 0.72 + ridge;
-      const rcol = Math.min(1, tone * (0.6 - forest * 0.28) + snow);
-      const gcol = Math.min(1, tone * (0.62 - forest * 0.1) + snow);
-      const bcol = Math.min(1, tone * (0.62 - forest * 0.3) + snow * 1.05);
-      colors[v * 3] = rcol;
-      colors[v * 3 + 1] = gcol;
-      colors[v * 3 + 2] = bcol;
-    }
-    geom.setAttribute('color', new BufferAttribute(colors, 3));
-    geom.computeVertexNormals();
-    const m = new Mesh(geom, mountainMat);
-    m.position.set(Math.sin(a) * r, height / 2 - 6, Math.cos(a) * r);
-    mountains.push(m);
-  }
-  env.add(mergeInto(mountainMat, mountains, false));
+  // One continuous mountain range ringing the horizon.
+  env.add(
+    mountainRange({
+      crestRadius: 200,
+      halfWidth: 55,
+      maxHeight: 78,
+      baseY: -0.6,
+      seed: 3,
+      forest: '#2c4a26',
+      rock: '#6b645c',
+      snow: '#eef3f5',
+      snowLine: 0.7,
+    }),
+  );
 }
 
 function buildClouds(world: World): void {
@@ -785,7 +737,7 @@ function buildClouds(world: World): void {
     const a = rand(0, Math.PI * 2);
     m.position.set(Math.sin(a) * rand(120, 220), rand(55, 95), Math.cos(a) * rand(120, 220));
     m.rotation.y = -a;
-    m.userData = { bobAmp: 0.8, bobSpeed: 0.04, driftAmp: rand(6, 12), driftSpeed: 0.006, phase: rand(0, 6) };
+    m.userData = { bobAmp: 0.8, bobSpeed: 0.04, driftAmp: rand(6, 12), driftSpeed: 0.006, phase: rand(0, 6), billboard: true };
     world.createTransformEntity(m).addComponent(Drifter);
   }
 }

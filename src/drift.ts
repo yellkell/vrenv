@@ -11,17 +11,26 @@
  *   bobAmp / bobSpeed  — vertical sine bob (m / rad·s)
  *   driftAmp / driftSpeed — slow horizontal orbit (m / rad·s)
  *   swayAmp / swaySpeed — z-axis rock (rad / rad·s)
+ *   billboard          — yaw toward the player (cloud planes, glow sprites)
  *   phase              — de-syncs neighbours
  */
 
 import { createComponent, createSystem } from '@iwsdk/core';
+import { Vector3 } from 'three';
 
 export const Drifter = createComponent('Drifter', {});
 
 export class DriftSystem extends createSystem({
   drifters: { required: [Drifter] },
 }) {
+  private headPos!: Vector3;
+
+  init() {
+    this.headPos = new Vector3();
+  }
+
   update(_delta: number, time: number) {
+    this.player.head.getWorldPosition(this.headPos);
     this.queries.drifters.entities.forEach((entity) => {
       const obj = entity.object3D;
       if (!obj) {
@@ -49,6 +58,13 @@ export class DriftSystem extends createSystem({
         obj.rotation.z =
           Math.sin(time * ((d.swaySpeed as number) ?? 0.4) + phase) *
           (d.swayAmp as number);
+      }
+      if (d.billboard) {
+        // Yaw-only billboard so cloud planes never get caught edge-on.
+        obj.rotation.y = Math.atan2(
+          this.headPos.x - obj.position.x,
+          this.headPos.z - obj.position.z,
+        );
       }
     });
   }

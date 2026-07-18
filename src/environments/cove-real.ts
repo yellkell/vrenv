@@ -4,8 +4,8 @@
  * The golden-hour lake island, rebuilt for realism: a noise-displaced
  * terrain mesh with a baked splat texture and 3D grass tufts, PBR water with
  * scrolling ripple normals reflecting a physical sunset sky (the glitter
- * path emerges from the environment map, not painted flecks), bough-card
- * pines, a live scrolling waterfall, striped-fabric hot-air balloons, and
+ * path emerges from the environment map, not painted flecks), volumetric
+ * displaced-geometry pines, a live scrolling waterfall, balloons, and
  * warm lantern pools with a flickering fire pit. One static shadow pass;
  * everything procedural.
  *
@@ -51,16 +51,17 @@ import {
   skyDome,
   type SkySpec,
 } from '../realism.js';
+import { leafyTree, mountainRange, pineTree } from '../nature.js';
 import {
   balloonFabric,
   barkTexture,
   cloudCard,
   fallStreaks,
-  foliageCard,
   glowSprite,
   grassTuftCard,
   islandSplat,
-  pineCard,
+  leafage,
+  needleage,
   rockTexture,
   srand,
   waterNormal,
@@ -308,10 +309,8 @@ function buildDock(env: Group): void {
 }
 
 // ----------------------------------------------------------------------------
-// Pines (bough cards), golden aspens, rocks
+// Volumetric pines, golden aspens, rocks
 // ----------------------------------------------------------------------------
-
-const pineTex = () => pineCard('#16301f', '#3e6a36');
 
 function buildFlora(env: Group): void {
   const bark = barkTexture('#4a3826');
@@ -320,19 +319,19 @@ function buildFlora(env: Group): void {
     normalMap: bark.normalMap,
     roughness: 1,
   });
-  const boughTex = pineTex();
+  const needles = needleage('#17301f', '#4a7838');
   const boughMat = new MeshStandardMaterial({
-    map: boughTex,
-    alphaTest: 0.3,
-    side: DoubleSide,
-    roughness: 0.95,
+    map: needles.map,
+    roughnessMap: needles.roughnessMap,
+    roughness: 1,
+    vertexColors: true,
   });
-  const goldTex = foliageCard('#7a5c1e', '#e0b84e');
+  const gold = leafage('#6e5218', '#e0b84e');
   const goldMat = new MeshStandardMaterial({
-    map: goldTex,
-    alphaTest: 0.28,
-    side: DoubleSide,
-    roughness: 0.95,
+    map: gold.map,
+    roughnessMap: gold.roughnessMap,
+    roughness: 1,
+    vertexColors: true,
   });
 
   const trunks: Mesh[] = [];
@@ -340,36 +339,14 @@ function buildFlora(env: Group): void {
   const golds: Mesh[] = [];
 
   const pineAt = (x: number, z: number, s: number, baseY?: number) => {
-    const y = baseY ?? groundY(x, z);
-    const trunk = new Mesh(new CylinderGeometry(0.07 * s, 0.14 * s, 1.5 * s, 8), trunkMat);
-    trunk.position.set(x, y + 0.75 * s, z);
-    trunks.push(trunk);
-    // Radial bough cards, wider and drooping near the base.
-    const tiers = 5;
-    for (let t = 0; t < tiers; t++) {
-      const frac = t / (tiers - 1);
-      const size = (2.4 - frac * 1.55) * s;
-      const cy = y + (0.5 + frac * 1.5) * s;
-      const n = t >= tiers - 2 ? 2 : 3;
-      for (let k = 0; k < n; k++) {
-        const card = new Mesh(new PlaneGeometry(size, size), boughMat);
-        card.position.set(x, cy + size * 0.28, z);
-        card.rotation.y = (k / n) * Math.PI + rand(-0.3, 0.3) + t;
-        boughs.push(card);
-      }
-    }
+    const parts = pineTree(x, baseY ?? groundY(x, z), z, s, rand);
+    trunks.push(...parts.trunk);
+    boughs.push(...parts.canopy);
   };
   const aspenAt = (x: number, z: number, s: number) => {
-    const y = groundY(x, z);
-    const trunk = new Mesh(new CylinderGeometry(0.05 * s, 0.08 * s, 1.6 * s, 8), trunkMat);
-    trunk.position.set(x, y + 0.8 * s, z);
-    trunks.push(trunk);
-    for (let k = 0; k < 3; k++) {
-      const card = new Mesh(new PlaneGeometry(1.5 * s, 1.7 * s), goldMat);
-      card.position.set(x, y + 1.85 * s, z);
-      card.rotation.y = (k / 3) * Math.PI + rand(-0.25, 0.25);
-      golds.push(card);
-    }
+    const parts = leafyTree(x, groundY(x, z), z, s * 0.8, rand);
+    trunks.push(...parts.trunk);
+    golds.push(...parts.canopy);
   };
 
   for (let i = 0; i < 12; i++) {
@@ -618,50 +595,23 @@ function buildWaterfall(env: Group): void {
 // ----------------------------------------------------------------------------
 
 function buildMountains(env: Group): void {
-  const rock = rockTexture();
-  rock.map.repeat.set(6, 3);
-  rock.normalMap!.repeat.set(6, 3);
-  const mat = new MeshStandardMaterial({
-    map: rock.map,
-    normalMap: rock.normalMap,
-    roughness: 1,
-    vertexColors: true,
-  });
-  const mountains: Mesh[] = [];
-  for (let i = 0; i < 11; i++) {
-    if (i === 5) continue; // leave open water under the setting sun
-    const a = (i / 11) * Math.PI * 2 + 0.26;
-    const r = rand(160, 235);
-    const height = rand(40, 75);
-    const base = rand(45, 75);
-    const geom = new CylinderGeometry(1.2, base, height, 22, 6);
-    const p = geom.getAttribute('position');
-    const colors = new Float32Array(p.count * 3);
-    for (let v = 0; v < p.count; v++) {
-      const vx = p.getX(v);
-      const vz = p.getZ(v);
-      const vy = p.getY(v);
-      const ang = Math.atan2(vx, vz);
-      const ridge = Math.sin(ang * 5 + i) * 0.15 + Math.sin(ang * 12 + i * 2) * 0.07;
-      p.setX(v, vx * (1 + ridge));
-      p.setZ(v, vz * (1 + ridge));
-      const hFrac = (vy + height / 2) / height;
-      const snow = Math.max(0, (hFrac - 0.62) * 2.4 + ridge * 0.4);
-      // Dusk shading: cool blue rock, warm-lit snow.
-      const tone = 0.45 + ridge * 0.6;
-      colors[v * 3] = Math.min(1, tone * 0.5 + snow * 1.05);
-      colors[v * 3 + 1] = Math.min(1, tone * 0.48 + snow * 0.9);
-      colors[v * 3 + 2] = Math.min(1, tone * 0.62 + snow * 0.85);
-    }
-    geom.setAttribute('color', new BufferAttribute(colors, 3));
-    geom.computeVertexNormals();
-    const m = new Mesh(geom, mat);
-    m.position.set(Math.sin(a) * r, height / 2 - 8, Math.cos(a) * r);
-    mountains.push(m);
-  }
-  const merged = mergeMeshes(mat, mountains);
-  merged.castShadow = false;
-  env.add(merged);
+  // One continuous dusk range, dipping low toward the sunset (-Z) so the
+  // sun keeps its stretch of open water.
+  env.add(
+    mountainRange({
+      crestRadius: 195,
+      halfWidth: 50,
+      maxHeight: 62,
+      baseY: WATER_Y - 0.2,
+      seed: 11,
+      dipAzimuth: Math.PI, // toward -Z, where the sun sits
+      dipDepth: 0.78,
+      forest: '#1d2a22',
+      rock: '#4c4a58',
+      snow: '#e8cab2',
+      snowLine: 0.6,
+    }),
+  );
 }
 
 // ----------------------------------------------------------------------------
@@ -761,7 +711,7 @@ function buildClouds(world: World): void {
     const a = rand(0, Math.PI * 2);
     m.position.set(Math.sin(a) * rand(90, 190), rand(30, 60), Math.cos(a) * rand(90, 190) - 30);
     m.rotation.y = -a;
-    m.userData = { bobAmp: 0.4, bobSpeed: 0.04, driftAmp: rand(5, 10), driftSpeed: 0.006, phase: rand(0, 6) };
+    m.userData = { bobAmp: 0.4, bobSpeed: 0.04, driftAmp: rand(5, 10), driftSpeed: 0.006, phase: rand(0, 6), billboard: true };
     world.createTransformEntity(m).addComponent(Drifter);
   }
 }

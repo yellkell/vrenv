@@ -553,6 +553,97 @@ export function pineCard(dark = '#2a4a34', light = '#6a9455', size = 512): Textu
   return canvasTexture(c, { srgb: true });
 }
 
+/**
+ * Opaque tiling foliage: dense small leaves over a dark base. Meant for
+ * *geometry* canopies (displaced clumps), so there is no alpha at all —
+ * no alpha-test erosion, correct in stereo.
+ */
+export function leafage(dark = '#243f1c', light = '#79a844', size = 512): TextureSet {
+  const [c, ctx] = makeCanvas(size);
+  ctx.fillStyle = dark;
+  ctx.fillRect(0, 0, size, size);
+  const cd = new Color(dark);
+  const cl = new Color(light);
+  for (let i = 0; i < 2600; i++) {
+    const t = R(0, 1);
+    const col = cd.clone().lerp(cl, t * t);
+    ctx.fillStyle = `#${col.getHexString()}`;
+    ctx.globalAlpha = R(0.7, 1);
+    const x = R(0, size);
+    const y = R(0, size);
+    const w = R(3, 9);
+    const h = w * R(0.5, 0.8);
+    const rot = R(0, Math.PI);
+    ctx.beginPath();
+    ctx.ellipse(x, y, w, h, rot, 0, Math.PI * 2);
+    ctx.fill();
+    // wrap edges so it tiles
+    if (x < 12) {
+      ctx.beginPath();
+      ctx.ellipse(x + size, y, w, h, rot, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (y < 12) {
+      ctx.beginPath();
+      ctx.ellipse(x, y + size, w, h, rot, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+  const [rc, rctx] = makeCanvas(256);
+  rctx.fillStyle = '#b8b8b8';
+  rctx.fillRect(0, 0, 256, 256);
+  addFbm(rctx, 256, 256, 24, 0.2);
+  return {
+    map: canvasTexture(c, { srgb: true }),
+    roughnessMap: canvasTexture(rc),
+  };
+}
+
+/** Opaque tiling conifer needles for geometry pine tiers. */
+export function needleage(dark = '#1c3626', light = '#54823e', size = 512): TextureSet {
+  const [c, ctx] = makeCanvas(size);
+  ctx.fillStyle = dark;
+  ctx.fillRect(0, 0, size, size);
+  const cd = new Color(dark);
+  const cl = new Color(light);
+  for (let i = 0; i < 5200; i++) {
+    const col = cd.clone().lerp(cl, R(0, 1));
+    ctx.strokeStyle = `#${col.getHexString()}`;
+    ctx.globalAlpha = R(0.6, 1);
+    ctx.lineWidth = R(1, 2.2);
+    const x = R(0, size);
+    const y = R(0, size);
+    const dx = R(-4, 4);
+    const dy = R(5, 14);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + dx, y + dy);
+    ctx.stroke();
+    if (y > size - 16) {
+      ctx.beginPath();
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x + dx, y - size + dy);
+      ctx.stroke();
+    }
+    if (x > size - 8 || x < 8) {
+      ctx.beginPath();
+      ctx.moveTo((x + size / 2) % size, y);
+      ctx.lineTo(((x + size / 2) % size) + dx, y + dy);
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+  const [rc, rctx] = makeCanvas(256);
+  rctx.fillStyle = '#c2c2c2';
+  rctx.fillRect(0, 0, 256, 256);
+  addFbm(rctx, 256, 256, 24, 0.15);
+  return {
+    map: canvasTexture(c, { srgb: true }),
+    roughnessMap: canvasTexture(rc),
+  };
+}
+
 /** Grass tuft card (a few blades) for near-field ground cover. */
 export function grassTuftCard(size = 256): Texture {
   const [c, ctx] = makeCanvas(size);
