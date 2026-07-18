@@ -1,17 +1,21 @@
-# IWSDK Papercraft Environments
+# IWSDK Environments
 
 A small collection of ready-made environments for [IWSDK — the Immersive Web
-SDK](https://iwsdk.dev). Every set is folded out of flat-shaded, low-poly
-**papercraft** geometry, so it ships as plain TypeScript with **no external 3D
-assets** — clone, install, run.
+SDK](https://iwsdk.dev), in two art styles: **realistic** (procedural PBR
+textures, physical skies, baked shadows) and **papercraft** (flat-shaded toon
+primitives). Everything is generated in code at load time, so the project
+ships as plain TypeScript with **no external 3D assets** — clone, install,
+run.
 
 Pick an environment with the `?env=` query parameter:
 
-| `?env=`    | Environment                 | Mood                                  |
-| ---------- | --------------------------- | ------------------------------------- |
-| `pavilion` | **Lakeside Sports Pavilion** (default) | Bright toon sports hall in a summer valley |
-| `cove`     | **Lantern Cove**            | Golden-hour lake island at sunset     |
-| `factory`  | **Papercraft Factory Floor** | Dilapidated industrial hall           |
+| `?env=`          | Environment                            | Style      |
+| ---------------- | -------------------------------------- | ---------- |
+| `pavilion`       | **Lakeside Sports Pavilion** (default) | Realistic  |
+| `cove`           | **Lantern Cove**                       | Realistic  |
+| `pavilion-paper` | Lakeside Sports Pavilion               | Papercraft |
+| `cove-paper`     | Lantern Cove                           | Papercraft |
+| `factory`        | **Papercraft Factory Floor**           | Papercraft |
 
 Every environment keeps its center wide open as a gameplay arena, registers
 its walkable surfaces with IWSDK locomotion (teleport + smooth), and includes
@@ -19,19 +23,23 @@ a few distance-grabbable props.
 
 ## Lakeside Sports Pavilion (`?env=pavilion`)
 
-A sun-drenched glass sports hall: an arched glass barrel vault on a teal steel
-frame, a warm wood deck wrapping a sunken blue-and-orange court, a chunky toon
-net, planters, benches, hanging banners, an umpire ladder chair, and a big
-screen. Through every pane: rounded trees, painterly mountains, a tiny toon
-town, and slowly drifting clouds. Grab a paddle and ball down on the court.
+A sun-drenched glass sports hall: steel tube arches carrying a curved,
+genuinely reflective glass vault, oak plank decking around a sunken acrylic
+court (painted — lines, service boxes, wear and all — into a single baked
+texture), a sagging woven net, wood-and-steel benches, printed fabric
+banners, concrete planters with leafy shrubs, and an LED scoreboard. Outside
+the glazing: a lawn, alpha-card trees, hazy mountains with snow caps, and
+drifting cloud billboards. Grab a paddle and ball down on the court.
 
 ## Lantern Cove (`?env=cove`)
 
-Golden hour on a grassy island in a still alpine lake. A wooden dock runs
-straight toward the low sun and its glitter path on the water; hot-air
-balloons drift overhead, a waterfall pours off a cliff island across the
-lake, and lantern posts (two of them genuinely lit) wake up as the light
-fades. Grabbable carry lantern, oar, and skipping stone.
+Golden hour on a lake island. A noise-displaced terrain mesh with a baked
+meadow-to-shore splat and 3D grass tufts; still water whose scrolling ripple
+normals reflect a physical sunset sky (the glitter path comes out of the
+environment map, not paint); a dock running straight at the sun; bough-card
+pines; a live scrolling waterfall; striped-fabric hot-air balloons; and
+lantern pools plus a flickering fire pit as the light fades. Grabbable carry
+lantern, oar, and skipping stone.
 
 ## Papercraft Factory Floor (`?env=factory`)
 
@@ -40,20 +48,35 @@ three walls, dead conveyors, broken machines, pallet racking, a gantry crane,
 and sliding bay doors that open as you approach (`BayDoorSystem`). Grabbable
 wrench, gear, hard hat, crate, and drum.
 
+## How the realistic style works (with zero assets)
+
+- **Procedural textures** (`src/textures.ts`): every material — oak planks,
+  sport acrylic, terrain splat, bark, foliage/pine alpha cards, cloud
+  billboards, banner art, the scoreboard — is painted into an offscreen
+  canvas at load, with normal maps derived from painted height via a Sobel
+  pass and roughness maps for PBR response.
+- **Physical sky + IBL** (`src/realism.ts`): an analytic gradient-plus-sun
+  shader dome is run through `PMREMGenerator` and set as
+  `scene.environment`, so glass, steel, and water actually reflect the
+  world. ACES filmic tone mapping ties it together.
+- **One static shadow pass**: the sun renders a single 2048px PCF shadow map
+  which is then frozen (`renderer.shadowMap.autoUpdate = false`) — real
+  contact shadows at near-zero per-frame cost.
+- **Live touches** (`TickSystem`): scrolling water normals, a falling-water
+  texture on the waterfall, ember flicker; balloons and clouds drift on the
+  same `Drifter` system as the papercraft scenes.
+
 ## Quest 3 performance
 
-The environments are authored as hundreds of tiny primitives (easy to write
-and tweak) and then collapsed at load time by `mergeStatic` (`src/merge.ts`),
-which bakes world transforms and material colors into vertex-colored merged
-meshes — one draw call per material *setting* rather than per object. A whole
-environment typically renders in a handful of draw calls plus the live bits
-(clouds, balloons, props, panel).
-
-Other guardrails: no shadow maps, one directional light + hemisphere/ambient
-fill, at most a couple of point lights, low-segment primitives, and fog for
-depth instead of extra geometry. Locomotion gets its own invisible low-poly
+Both styles budget the same way: merged static geometry (papercraft via
+`mergeStatic`, realistic via per-material `mergeGeometries` batches — trees
+collapse to two draw calls, mountains to one), a few dozen draw calls per
+scene, one directional light plus hemisphere fill, at most three point
+lights, alpha *testing* instead of alpha blending for foliage, fog for depth,
+and no per-frame shadow rendering. Locomotion gets its own invisible low-poly
 nav group (indexed geometry only, which the IWSDK locomotor requires) instead
-of colliding against the full visual set.
+of colliding against the full visual set; the realistic environments reuse
+the exact nav meshes exported by their papercraft twins.
 
 ## Run it
 
@@ -84,9 +107,13 @@ src/
   index.ts                  # World.create(), spawns the chosen environment
   environments/
     registry.ts             # environment catalog + ?env= selection
-    pavilion.ts             # Lakeside Sports Pavilion
-    cove.ts                 # Lantern Cove
+    pavilion-real.ts        # Lakeside Sports Pavilion (realistic, default)
+    cove-real.ts            # Lantern Cove (realistic, default)
+    pavilion.ts             # Lakeside Sports Pavilion (papercraft) + nav mesh
+    cove.ts                 # Lantern Cove (papercraft) + nav mesh
   factory.ts                # Papercraft Factory Floor
+  textures.ts               # procedural canvas textures (realistic style)
+  realism.ts                # sky shader, PMREM env baking, shadows, TickSystem
   papercraft.ts             # flat-shaded primitives, gradients, RNG helpers
   merge.ts                  # static-geometry merge pass (draw-call collapse)
   drift.ts                  # Drifter component + ambient-motion system
@@ -104,8 +131,10 @@ meadow (~13 m radius), or the factory's marked work zone (~18 m square).
 
 ## Tweaking the look
 
-Each environment file starts with its dimension constants and a `C` color
-palette. The papercraft feel comes from `flatShading` plus low segment counts
-(see `src/papercraft.ts`); the gradients on trees, mountains, and skies are
-vertex colors painted by `gradientPaint` / `radialPaint`, and they survive the
-merge pass untouched.
+Each environment file starts with its dimension constants and palette. In the
+realistic scenes, most of the look lives in `src/textures.ts` (per-material
+canvas painting) and each scene's `SKY` spec (gradient stops, sun direction,
+halo) — change those and the PMREM reflections, water, and lighting follow.
+The papercraft feel comes from `flatShading` plus low segment counts (see
+`src/papercraft.ts`); its gradients are vertex colors painted by
+`gradientPaint` / `radialPaint`, and they survive the merge pass untouched.

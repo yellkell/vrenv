@@ -145,8 +145,11 @@ export function buildCove(world: World): void {
   buildProps(world);
 }
 
-/** Invisible walkable/collision proxy: island dome, dock deck, barriers. */
-function buildNav(): Group {
+/**
+ * Invisible walkable/collision proxy: island dome, dock deck, barriers.
+ * Exported because the realistic cove shares the exact same layout.
+ */
+export function buildNav(): Group {
   const g = new Group();
   const mat = new MeshStandardMaterial();
   const domeH = ISLAND.r * ISLAND.squash * 2;

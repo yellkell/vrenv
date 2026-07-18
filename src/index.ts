@@ -26,6 +26,7 @@ import { BayDoorSystem } from './doors.js';
 import { DriftSystem } from './drift.js';
 import { currentEnvironment } from './environments/registry.js';
 import { PanelSystem } from './panel.js';
+import { TickSystem } from './realism.js';
 
 const env = currentEnvironment();
 document.title = `${env.title} — IWSDK Environments`;
@@ -37,6 +38,7 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, {
     features: { handTracking: true },
   },
   features: { grabbing: true, locomotion: true },
+  ...(env.render ? { render: env.render } : {}),
 }).then((world) => {
   const { camera } = world;
   camera.position.set(...env.spawn);
@@ -63,5 +65,6 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, {
   world
     .registerSystem(BayDoorSystem)
     .registerSystem(DriftSystem)
+    .registerSystem(TickSystem)
     .registerSystem(PanelSystem);
 });

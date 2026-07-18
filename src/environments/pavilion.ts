@@ -159,8 +159,11 @@ export function buildPavilion(world: World): void {
   buildProps(world);
 }
 
-/** Invisible walkable/collision proxy: floors, pit steps, and wall barriers. */
-function buildNav(): Group {
+/**
+ * Invisible walkable/collision proxy: floors, pit steps, and wall barriers.
+ * Exported because the realistic pavilion shares the exact same layout.
+ */
+export function buildNav(): Group {
   const g = new Group();
   const mat = paper(C.white);
   const outerHx = PIT.hx + 2 * STEP;
