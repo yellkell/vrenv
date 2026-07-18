@@ -36,9 +36,9 @@ export const ENVIRONMENTS: Record<string, EnvironmentDef> = {
     id: 'pavilion',
     title: 'Lakeside Sports Pavilion',
     blurb:
-      'A sun-drenched glass sports hall: steel arches, reflective glazing, ' +
-      'oak decking, and an acrylic court sunk at the center. Step down, ' +
-      'grab a paddle and rally over the net.',
+      'A sun-drenched glass sports hall on a knoll above a lake: steel ' +
+      'arches, reflective glazing, oak decking, and an acrylic court sunk ' +
+      'at the center. Rally over the net, or watch the sailboats drift.',
     spawn: [0, 1.6, 12.5],
     panelPosition: [0, 2.1, 9.2],
     render: { far: 600, defaultLighting: false },

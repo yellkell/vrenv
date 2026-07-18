@@ -138,7 +138,10 @@ export function mountainRange(opts: RangeOptions): Mesh {
       positions.push(x, opts.baseY + h, z);
       uvs.push((i / around) * 40, t * 6);
 
-      // Color ramp by height fraction with noisy transitions.
+      // Color ramp by height fraction with noisy transitions. The rock map
+      // multiplies these (average luminance ≈ 0.45), so compensate to keep
+      // the authored tones on screen.
+      const TEX_COMP = 2.2;
       const frac = h / (opts.maxHeight * 1.1);
       const jitter = (noise2(x * 0.12, z * 0.12) - 0.5) * 0.18;
       const f = frac + jitter;
@@ -149,14 +152,15 @@ export function mountainRange(opts: RangeOptions): Mesh {
         const k = Math.min(1, Math.max(0, (f - 0.06) / 0.3));
         tmp.copy(cForest).lerp(cRock, k);
       }
-      colors.push(tmp.r, tmp.g, tmp.b);
+      colors.push(tmp.r * TEX_COMP, tmp.g * TEX_COMP, tmp.b * TEX_COMP);
     }
   }
   for (let i = 0; i < around; i++) {
     for (let j = 0; j < rows - 1; j++) {
       const a = i * rows + j;
       const b = (i + 1) * rows + j;
-      indices.push(a, b, a + 1, b, b + 1, a + 1);
+      // Wound so faces (and computed normals) point up/outward.
+      indices.push(a, a + 1, b, b, a + 1, b + 1);
     }
   }
 

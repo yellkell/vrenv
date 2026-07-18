@@ -38,13 +38,15 @@ import {
   MeshStandardMaterial,
   Object3D,
   PlaneGeometry,
+  RingGeometry,
+  SphereGeometry,
   TubeGeometry,
   Vector3,
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Drifter } from '../drift.js';
-import { leafClump, leafyTree, mountainRange } from '../nature.js';
-import { applyRealismRenderer, bakeEnvironment, skyDome, type SkySpec } from '../realism.js';
+import { leafClump, leafyTree, mountainRange, noise2 } from '../nature.js';
+import { applyRealismRenderer, bakeEnvironment, onTick, skyDome, type SkySpec } from '../realism.js';
 import {
   bannerArt,
   barkTexture,
@@ -58,6 +60,7 @@ import {
   paintedMetal,
   screenArt,
   srand,
+  waterNormal,
   woodPlanks,
 } from '../textures.js';
 import { buildNav } from './pavilion.js';
@@ -108,8 +111,8 @@ function mergeInto(material: MeshStandardMaterial, meshes: Mesh[], shadows = tru
 
 const SKY: SkySpec = {
   top: '#2e6fb2',
-  mid: '#7db8e0',
-  horizon: '#dceef5',
+  mid: '#68a9d8',
+  horizon: '#aed6ec',
   sunDirection: new Vector3(0.45, 0.72, 0.4),
   sunColor: '#fff2d8',
   haloPower: 120,
@@ -124,7 +127,7 @@ export function buildPavilionReal(world: World): void {
   srand(0x51ab);
   applyRealismRenderer(world, 1.05);
   bakeEnvironment(world, SKY, 0.9);
-  world.scene.fog = new Fog('#d8e9f0', 120, 400);
+  world.scene.fog = new Fog('#c8dfeb', 150, 460);
 
   const env = new Group();
   env.name = 'SportsPavilionReal';
@@ -148,6 +151,7 @@ export function buildPavilionReal(world: World): void {
     .addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC });
 
   buildClouds(world);
+  buildBoats(world);
   buildProps(world);
 }
 
@@ -615,23 +619,128 @@ function buildFurnishings(env: Group): void {
 }
 
 // ----------------------------------------------------------------------------
-// Backdrop: lawn, concrete apron, textured trees, mountains
+// Backdrop: lakeside grounds — lawn peninsula, water, far shore, mountains
 // ----------------------------------------------------------------------------
 
+/**
+ * The pavilion's grounds: the hall sits on a low knoll whose lawn eases
+ * down ~1.75 m to a noise-wobbled shoreline, so the lake is actually seen
+ * from above instead of edge-on.
+ */
+function groundsY(r: number, wobble: number): number {
+  const shore = 54 + wobble * 8;
+  let y = -0.35;
+  if (r > 24) {
+    const t = Math.min((r - 24) / (shore - 24), 1);
+    y -= t * t * (3 - 2 * t) * 1.75;
+  }
+  if (r > shore) {
+    const t = Math.min((r - shore) / 10, 1);
+    y -= t * t * 0.75;
+  }
+  return y;
+}
+
+/** Ground height at a world position (matches the grounds mesh exactly). */
+function groundsHeight(x: number, z: number): number {
+  const r = Math.hypot(x, z);
+  const theta = Math.atan2(x, z);
+  const wobble = noise2(Math.cos(theta) * 2.8 + 7, Math.sin(theta) * 2.8 + 7) - 0.5;
+  return groundsY(r, wobble);
+}
+
 function buildBackdrop(env: Group): void {
+  // Grounds disc: flat lawn sloping into the water at a noise-wobbled
+  // shoreline, with a sandy vertex-color tint along the waterline.
   const grass = grassTexture();
   const lawnMat = new MeshStandardMaterial({
     map: grass.map,
     normalMap: grass.normalMap,
     roughness: 1,
+    vertexColors: true,
   });
-  grass.map.repeat.set(48, 48);
-  grass.normalMap!.repeat.set(48, 48);
-  const lawn = new Mesh(new PlaneGeometry(320, 320), lawnMat);
-  lawn.rotation.x = -Math.PI / 2;
-  lawn.position.y = -0.35;
-  lawn.receiveShadow = true;
-  env.add(lawn);
+  {
+    const around = 96;
+    const rings = [0, 14, 26, 36, 44, 50, 54, 57, 60, 63, 66];
+    const positions: number[] = [];
+    const colors: number[] = [];
+    const uvs: number[] = [];
+    const indices: number[] = [];
+    for (let i = 0; i <= around; i++) {
+      const theta = ((i % around) / around) * Math.PI * 2;
+      const cx = Math.cos(theta);
+      const sz = Math.sin(theta);
+      const wobble = noise2(cx * 2.8 + 7, sz * 2.8 + 7) - 0.5;
+      for (const r of rings) {
+        const x = Math.sin(theta) * r;
+        const z = Math.cos(theta) * r;
+        const y = groundsY(r, wobble);
+        positions.push(x, y, z);
+        uvs.push(x / 6.7, z / 6.7);
+        // Grass → sandy rim → dark submerged edge.
+        const shore = 54 + wobble * 8;
+        const t = Math.max(0, Math.min((r - shore + 3) / 9, 1));
+        const sink = Math.max(0, Math.min((r - shore - 4) / 5, 1));
+        colors.push(
+          (1 + t * 0.35) * (1 - sink * 0.55),
+          (1 + t * 0.18) * (1 - sink * 0.5),
+          (1 + t * 0.05) * (1 - sink * 0.5),
+        );
+      }
+    }
+    const cols = rings.length;
+    for (let i = 0; i < around; i++) {
+      for (let j = 0; j < cols - 1; j++) {
+        const a = i * cols + j;
+        const b = (i + 1) * cols + j;
+        // Wound so faces (and computed normals) point up.
+        indices.push(a, a + 1, b, b, a + 1, b + 1);
+      }
+    }
+    const geom = new BufferGeometry();
+    geom.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
+    geom.setAttribute('color', new BufferAttribute(new Float32Array(colors), 3));
+    geom.setAttribute('uv', new BufferAttribute(new Float32Array(uvs), 2));
+    geom.setIndex(indices);
+    geom.computeVertexNormals();
+    const lawn = new Mesh(geom, lawnMat);
+    lawn.receiveShadow = true;
+    env.add(lawn);
+  }
+
+  // The lake: same living water as the cove, reflecting the day sky.
+  const ripple = waterNormal();
+  ripple.repeat.set(60, 60);
+  const waterMat = new MeshStandardMaterial({
+    color: '#1c6280',
+    roughness: 0.4,
+    metalness: 0.08,
+    normalMap: ripple,
+    envMapIntensity: 0.45,
+  });
+  waterMat.normalScale.set(0.55, 0.55);
+  const water = new Mesh(new PlaneGeometry(600, 600), waterMat);
+  water.rotation.x = -Math.PI / 2;
+  water.position.y = -2.35;
+  env.add(water);
+  // Dark sheen hugging the far shore: reads as the hills' reflection (the
+  // PMREM only carries sky, so the waterline needs this cue to look real).
+  const reflect = new Mesh(
+    new RingGeometry(118, 168, 72),
+    new MeshStandardMaterial({
+      color: '#16281e',
+      transparent: true,
+      opacity: 0.5,
+      roughness: 0.55,
+    }),
+  );
+  reflect.rotation.x = -Math.PI / 2;
+  reflect.position.y = -2.33;
+  env.add(reflect);
+  onTick((delta) => {
+    ripple.offset.x += delta * 0.006;
+    ripple.offset.y += delta * 0.0035;
+  });
 
   const conc = concreteTexture();
   conc.map.repeat.set(10, 1.6);
@@ -684,33 +793,56 @@ function buildBackdrop(env: Group): void {
   });
   const trunks: Mesh[] = [];
   const canopies: Mesh[] = [];
-  const treeAt = (x: number, z: number, s: number) => {
-    const parts = leafyTree(x, -0.35, z, s, rand);
+  const treeAt = (x: number, z: number, s: number, y = -0.35) => {
+    const parts = leafyTree(x, y, z, s, rand);
     trunks.push(...parts.trunk);
     canopies.push(...parts.canopy);
   };
+  // Grounds trees, kept on the dry side of the shoreline.
   for (let i = 0; i < 22; i++) {
     const a = rand(0, Math.PI * 2);
-    const r = rand(24, 60);
+    const r = rand(24, 46);
     const x = Math.sin(a) * r;
     const z = Math.cos(a) * r;
     if (Math.abs(x) < HALL.hx + 5 && Math.abs(z) < HALL.hz + 5) continue;
-    treeAt(x, z, rand(0.8, 1.7));
+    treeAt(x, z, rand(0.8, 1.7), groundsHeight(x, z) - 0.05);
   }
   for (let i = 0; i < 9; i++) {
-    treeAt(rand(-26, 26), -HALL.hz - rand(7, 26), rand(1.0, 1.9));
+    const x = rand(-26, 26);
+    const z = -HALL.hz - rand(7, 22);
+    treeAt(x, z, rand(1.0, 1.9), groundsHeight(x, z) - 0.05);
+  }
+  // Far-shore treeline across the water, at the feet of the hills.
+  for (let i = 0; i < 18; i++) {
+    const a = rand(0, Math.PI * 2);
+    const r = rand(128, 158);
+    treeAt(Math.sin(a) * r, Math.cos(a) * r, rand(2.6, 4.2), -2.55);
   }
   env.add(mergeInto(trunkMat, trunks));
   const canopyMesh = mergeInto(leafMat, canopies);
   canopyMesh.castShadow = true;
   env.add(canopyMesh);
 
-  // One continuous mountain range ringing the horizon.
+  // Forested hills rising off the far shore…
   env.add(
     mountainRange({
-      crestRadius: 200,
-      halfWidth: 55,
-      maxHeight: 78,
+      crestRadius: 175,
+      halfWidth: 48,
+      maxHeight: 30,
+      baseY: -2.5,
+      seed: 7,
+      forest: '#3c6432',
+      rock: '#5a8a4a',
+      snow: '#ffffff',
+      snowLine: 1.5, // never reached — these stay tree-covered
+    }),
+  );
+  // …backed by the mountain range on the horizon.
+  env.add(
+    mountainRange({
+      crestRadius: 235,
+      halfWidth: 58,
+      maxHeight: 85,
       baseY: -0.6,
       seed: 3,
       forest: '#2c4a26',
@@ -719,6 +851,57 @@ function buildBackdrop(env: Group): void {
       snowLine: 0.7,
     }),
   );
+}
+
+/** A couple of little sailboats out on the lake, drifting slowly. */
+function buildBoats(world: World): void {
+  const hullMat = new MeshStandardMaterial({ color: '#f2efe6', roughness: 0.5 });
+  const trimMat = new MeshStandardMaterial({ color: '#7e3c22', roughness: 0.7 });
+  const sailMat = new MeshStandardMaterial({
+    color: '#fbfaf4',
+    roughness: 0.85,
+    side: DoubleSide,
+  });
+  const specs: Array<[number, number, number, string]> = [
+    [64, -78, 0.9, '#c62f3e'],
+    [-88, -46, 1.15, '#2e6fb2'],
+    [96, 34, 1.0, '#e8a13a'],
+  ];
+  for (const [x, z, s, accent] of specs) {
+    const g = new Group();
+    const hull = new Mesh(new SphereGeometry(1.5 * s, 14, 10), hullMat);
+    hull.scale.set(0.42, 0.28, 1);
+    g.add(hull);
+    const stripe = new Mesh(new SphereGeometry(1.52 * s, 14, 10), new MeshStandardMaterial({ color: accent, roughness: 0.6 }));
+    stripe.scale.set(0.43, 0.12, 1.01);
+    stripe.position.y = 0.12 * s;
+    g.add(stripe);
+    const mast = new Mesh(new CylinderGeometry(0.03 * s, 0.04 * s, 3.4 * s, 8), trimMat);
+    mast.position.y = 1.9 * s;
+    g.add(mast);
+    // Triangular main sail (a flattened 3-sided cone reads as one from afar).
+    const sail = new Mesh(new CylinderGeometry(0.02, 1.15 * s, 2.8 * s, 3), sailMat);
+    sail.scale.z = 0.06;
+    sail.position.set(0.02, 2.0 * s, -0.55 * s);
+    sail.rotation.y = Math.PI / 6;
+    g.add(sail);
+    const jib = new Mesh(new CylinderGeometry(0.02, 0.7 * s, 2.0 * s, 3), sailMat);
+    jib.scale.z = 0.06;
+    jib.position.set(0, 1.6 * s, 0.85 * s);
+    g.add(jib);
+    g.position.set(x, -2.22, z);
+    g.rotation.y = rand(0, Math.PI * 2);
+    g.userData = {
+      bobAmp: 0.06,
+      bobSpeed: 0.5,
+      driftAmp: rand(4, 9),
+      driftSpeed: 0.01,
+      swayAmp: 0.035,
+      swaySpeed: 0.45,
+      phase: rand(0, 6),
+    };
+    world.createTransformEntity(g).addComponent(Drifter);
+  }
 }
 
 function buildClouds(world: World): void {

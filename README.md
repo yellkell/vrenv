@@ -28,8 +28,10 @@ genuinely reflective glass vault, oak plank decking around a sunken acrylic
 court (painted — lines, service boxes, wear and all — into a single baked
 texture), a sagging woven net, wood-and-steel benches, printed fabric
 banners, concrete planters with leafy shrubs, and an LED scoreboard. Outside
-the glazing: a lawn, volumetric leaf-clump trees, one continuous hazy
-mountain range on the horizon, and drifting cloud billboards. Grab a paddle and ball down on the court.
+the glazing, the grounds actually earn the name: a lawn knoll eases down to
+a lake on every side, with drifting sailboats, a treeline and forested
+hills on the far shore, and a continuous hazy mountain range behind them.
+Grab a paddle and ball down on the court.
 
 ## Lantern Cove (`?env=cove`)
 
