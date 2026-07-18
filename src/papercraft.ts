@@ -13,9 +13,12 @@
 
 import {
   BoxGeometry,
+  BufferAttribute,
+  BufferGeometry,
   Color,
   CylinderGeometry,
   Group,
+  IcosahedronGeometry,
   Mesh,
   MeshStandardMaterial,
   Object3D,
@@ -72,6 +75,92 @@ export function post(
   return dressMesh(
     new Mesh(new CylinderGeometry(radiusTop, radiusBottom, height, segments), material),
   );
+}
+
+/** A faceted "crumpled paper" ball — good for foliage, rocks, clouds, balloons. */
+export function ball(
+  radius: number,
+  color: Paint | MeshStandardMaterial,
+  detail = 1,
+): Mesh {
+  const material = color instanceof MeshStandardMaterial ? color : paper(color);
+  return dressMesh(new Mesh(new IcosahedronGeometry(radius, detail), material));
+}
+
+/** A chunky faceted cone (pine trees, mountains, funnels). */
+export function cone(
+  radius: number,
+  height: number,
+  color: Paint | MeshStandardMaterial,
+  segments = 7,
+): Mesh {
+  const material = color instanceof MeshStandardMaterial ? color : paper(color);
+  return dressMesh(
+    new Mesh(new CylinderGeometry(0.001, radius, height, segments), material),
+  );
+}
+
+/**
+ * Paints a vertical color gradient into a geometry's vertex colors (bottom →
+ * top in the geometry's local space). The mesh's material is switched to white
+ * + `vertexColors` so the gradient is what you see; `mergeStatic` keeps
+ * authored vertex colors intact, so gradients survive the merge pass.
+ */
+export function gradientPaint(mesh: Mesh, bottom: Paint, top: Paint): Mesh {
+  const geom = mesh.geometry as BufferGeometry;
+  geom.computeBoundingBox();
+  const bb = geom.boundingBox!;
+  const span = Math.max(bb.max.y - bb.min.y, 1e-5);
+  const pos = geom.getAttribute('position');
+  const colors = new Float32Array(pos.count * 3);
+  const cBottom = new Color(bottom);
+  const cTop = new Color(top);
+  const c = new Color();
+  for (let i = 0; i < pos.count; i++) {
+    const t = (pos.getY(i) - bb.min.y) / span;
+    c.copy(cBottom).lerp(cTop, t);
+    colors[i * 3] = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
+  }
+  geom.setAttribute('color', new BufferAttribute(colors, 3));
+  const mat = mesh.material as MeshStandardMaterial;
+  mat.color.set('#ffffff');
+  mat.vertexColors = true;
+  return mesh;
+}
+
+/**
+ * Paints a radial color gradient (center → rim in the local XZ plane) into a
+ * geometry's vertex colors. Great for ground discs and water. Same material
+ * handling as `gradientPaint`.
+ */
+export function radialPaint(mesh: Mesh, center: Paint, rim: Paint): Mesh {
+  const geom = mesh.geometry as BufferGeometry;
+  geom.computeBoundingBox();
+  const bb = geom.boundingBox!;
+  const maxR = Math.max(
+    Math.hypot(bb.max.x, bb.max.z),
+    Math.hypot(bb.min.x, bb.min.z),
+    1e-5,
+  );
+  const pos = geom.getAttribute('position');
+  const colors = new Float32Array(pos.count * 3);
+  const cCenter = new Color(center);
+  const cRim = new Color(rim);
+  const c = new Color();
+  for (let i = 0; i < pos.count; i++) {
+    const t = Math.min(Math.hypot(pos.getX(i), pos.getZ(i)) / maxR, 1);
+    c.copy(cCenter).lerp(cRim, t);
+    colors[i * 3] = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
+  }
+  geom.setAttribute('color', new BufferAttribute(colors, 3));
+  const mat = mesh.material as MeshStandardMaterial;
+  mat.color.set('#ffffff');
+  mat.vertexColors = true;
+  return mesh;
 }
 
 /** Position helper that also returns the object, so calls can be chained inline. */

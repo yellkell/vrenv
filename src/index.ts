@@ -1,10 +1,17 @@
 /**
- * Papercraft Factory Floor — IWSDK entry point.
+ * IWSDK Environments — entry point.
  *
- * Boots an immersive-VR world, builds the procedural papercraft factory, drops
- * in a welcome panel, and registers the sliding bay-door system. Use this as a
- * ready-made industrial environment to build IWSDK games on top of: the large
- * central work floor is left wide open for gameplay.
+ * Boots an immersive-VR world and builds one of the project's ready-made
+ * papercraft environments (see ./environments/registry.ts):
+ *
+ *   ?env=pavilion  — Lakeside Sports Pavilion (default): bright glass sports
+ *                    hall with a sunken court in a toon summer valley.
+ *   ?env=cove      — Lantern Cove: golden-hour lake island with balloons,
+ *                    a dock, and a waterfall.
+ *   ?env=factory   — Papercraft Factory Floor: dilapidated industrial hall.
+ *
+ * Every environment keeps its center open as a gameplay arena — build your
+ * game on top by adding entities/systems after `env.build(world)` runs.
  */
 
 import {
@@ -16,8 +23,12 @@ import {
 } from '@iwsdk/core';
 
 import { BayDoorSystem } from './doors.js';
-import { buildFactory } from './factory.js';
+import { DriftSystem } from './drift.js';
+import { currentEnvironment } from './environments/registry.js';
 import { PanelSystem } from './panel.js';
+
+const env = currentEnvironment();
+document.title = `${env.title} — IWSDK Environments`;
 
 World.create(document.getElementById('scene-container') as HTMLDivElement, {
   xr: {
@@ -28,16 +39,12 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, {
   features: { grabbing: true, locomotion: true },
 }).then((world) => {
   const { camera } = world;
+  camera.position.set(...env.spawn);
 
-  // Start standing just inside the bay doors, facing into the work floor (-Z).
-  camera.position.set(0, 1.6, 15);
+  env.build(world);
 
-  // Build the whole set: walls, catwalk, conveyors, machines, racking, crane,
-  // lighting, sliding doors, and grabbable props.
-  buildFactory(world);
-
-  // Welcome panel floating over the entrance (also shown as a 2D overlay on
-  // desktop via ScreenSpace).
+  // Welcome panel floating near the spawn point (also shown as a 2D overlay
+  // on desktop via ScreenSpace).
   const panel = world
     .createTransformEntity()
     .addComponent(PanelUI, {
@@ -51,7 +58,10 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, {
       left: '20px',
       height: '40%',
     });
-  panel.object3D!.position.set(0, 2.2, 11);
+  panel.object3D!.position.set(...env.panelPosition);
 
-  world.registerSystem(BayDoorSystem).registerSystem(PanelSystem);
+  world
+    .registerSystem(BayDoorSystem)
+    .registerSystem(DriftSystem)
+    .registerSystem(PanelSystem);
 });

@@ -1,28 +1,59 @@
-# Papercraft Factory Floor
+# IWSDK Papercraft Environments
 
-A big indoor **industrial factory floor** built for [IWSDK — the Immersive Web SDK](https://iwsdk.dev).
-The entire set is folded out of flat-shaded, low-poly **papercraft** geometry, so
-it ships as plain TypeScript with **no external 3D assets** — clone, install, run.
+A small collection of ready-made environments for [IWSDK — the Immersive Web
+SDK](https://iwsdk.dev). Every set is folded out of flat-shaded, low-poly
+**papercraft** geometry, so it ships as plain TypeScript with **no external 3D
+assets** — clone, install, run.
 
-The middle of the room is a wide-open **work floor** (a 36 m × 36 m hall with a
-clear central zone marked by yellow safety lanes), deliberately left empty so you
-can build a game on top of a finished, atmospheric environment. A steel
-**catwalk / mezzanine** wraps three walls.
+Pick an environment with the `?env=` query parameter:
 
-## What's in the scene
+| `?env=`    | Environment                 | Mood                                  |
+| ---------- | --------------------------- | ------------------------------------- |
+| `pavilion` | **Lakeside Sports Pavilion** (default) | Bright toon sports hall in a summer valley |
+| `cove`     | **Lantern Cove**            | Golden-hour lake island at sunset     |
+| `factory`  | **Papercraft Factory Floor** | Dilapidated industrial hall           |
 
-- **Work floor** – two-tone concrete bays, painted safety lanes, hazard chevrons by the doors, and a steel gear emblem at center.
-- **Factory shell** – ribbed metal cladding, a clerestory window band, roof trusses under a deck, and steel I-beam columns.
-- **Catwalk / mezzanine** – grating decks on three walls with yellow handrails, toe boards, support brackets, and a switchback stair (the "balcony", industrial-style).
-- **Conveyors** – belt frames with rollers, legs, and crates riding along.
-- **Machines** – bodies with control panels, screens, indicator buttons, and stack lights.
-- **Pallet racking** – multi-bay uprights and beams loaded with crates.
-- **Clutter** – crate/pallet stacks and clusters of oil drums.
-- **Gantry crane** – a bridge girder on end trucks with a trolley and hook block, riding rails over the floor.
-- **Pipework & high-bay lights** – wall pipe runs plus hanging high-bay fixtures carrying the cool key lighting.
-- **Sliding bay doors** – two leaves that slide open as you approach and glide shut behind you (`BayDoorSystem`).
-- **Grabbable props** – a wrench, a gear, a hard hat, a crate, and an oil drum (distance-grabbable).
-- **Welcome panel** – spatial UI with an Enter/Exit XR button.
+Every environment keeps its center wide open as a gameplay arena, registers
+its walkable surfaces with IWSDK locomotion (teleport + smooth), and includes
+a few distance-grabbable props.
+
+## Lakeside Sports Pavilion (`?env=pavilion`)
+
+A sun-drenched glass sports hall: an arched glass barrel vault on a teal steel
+frame, a warm wood deck wrapping a sunken blue-and-orange court, a chunky toon
+net, planters, benches, hanging banners, an umpire ladder chair, and a big
+screen. Through every pane: rounded trees, painterly mountains, a tiny toon
+town, and slowly drifting clouds. Grab a paddle and ball down on the court.
+
+## Lantern Cove (`?env=cove`)
+
+Golden hour on a grassy island in a still alpine lake. A wooden dock runs
+straight toward the low sun and its glitter path on the water; hot-air
+balloons drift overhead, a waterfall pours off a cliff island across the
+lake, and lantern posts (two of them genuinely lit) wake up as the light
+fades. Grabbable carry lantern, oar, and skipping stone.
+
+## Papercraft Factory Floor (`?env=factory`)
+
+A big dilapidated industrial hall: two-tone concrete bays, steel catwalks on
+three walls, dead conveyors, broken machines, pallet racking, a gantry crane,
+and sliding bay doors that open as you approach (`BayDoorSystem`). Grabbable
+wrench, gear, hard hat, crate, and drum.
+
+## Quest 3 performance
+
+The environments are authored as hundreds of tiny primitives (easy to write
+and tweak) and then collapsed at load time by `mergeStatic` (`src/merge.ts`),
+which bakes world transforms and material colors into vertex-colored merged
+meshes — one draw call per material *setting* rather than per object. A whole
+environment typically renders in a handful of draw calls plus the live bits
+(clouds, balloons, props, panel).
+
+Other guardrails: no shadow maps, one directional light + hemisphere/ambient
+fill, at most a couple of point lights, low-segment primitives, and fog for
+depth instead of extra geometry. Locomotion gets its own invisible low-poly
+nav group (indexed geometry only, which the IWSDK locomotor requires) instead
+of colliding against the full visual set.
 
 ## Run it
 
@@ -31,8 +62,9 @@ npm install
 npm run dev
 ```
 
-`npm run dev` launches the IWSDK dev server. On desktop you get keyboard/mouse XR
-emulation (no headset required); on a Quest browser, hit **Enter XR**.
+`npm run dev` launches the IWSDK dev server. On desktop you get keyboard/mouse
+XR emulation (no headset required); on a Quest browser, hit **Enter XR**. Add
+`?env=cove` (or `factory`) to the URL to switch environments.
 
 Requires Node.js ≥ 20.19.
 
@@ -46,26 +78,34 @@ WebXR/immersive mode needs HTTPS, which GitHub Pages provides.
 ## Project layout
 
 ```
-index.html            # mounts #scene-container and loads src/index.ts
-vite.config.ts        # IWSDK dev plugin + UIKitML compiler + mkcert
+index.html                  # mounts #scene-container and loads src/index.ts
+vite.config.ts              # IWSDK dev plugin + UIKitML compiler + mkcert
 src/
-  index.ts            # World.create(), camera, registers systems
-  factory.ts          # buildFactory(world): all geometry, lights, doors, props
-  papercraft.ts       # flat-shaded "folded paper" material/primitive helpers
-  doors.ts            # BayDoor component + BayDoorSystem (proximity slide)
-  panel.ts            # wires the welcome panel's Enter/Exit XR button
-ui/welcome.uikitml    # spatial UI template (compiled to public/ui/welcome.json)
+  index.ts                  # World.create(), spawns the chosen environment
+  environments/
+    registry.ts             # environment catalog + ?env= selection
+    pavilion.ts             # Lakeside Sports Pavilion
+    cove.ts                 # Lantern Cove
+  factory.ts                # Papercraft Factory Floor
+  papercraft.ts             # flat-shaded primitives, gradients, RNG helpers
+  merge.ts                  # static-geometry merge pass (draw-call collapse)
+  drift.ts                  # Drifter component + ambient-motion system
+  doors.ts                  # BayDoor component + proximity slide (factory)
+  panel.ts                  # welcome panel title/blurb + Enter/Exit XR button
+ui/welcome.uikitml          # spatial UI template (compiled to public/ui/)
 ```
 
 ## Building your game on top
 
-`buildFactory(world)` is self-contained. In `src/index.ts`, after it runs, add
-your own entities/systems. Keep gameplay actors inside the central work zone
-(roughly a 18 m square centered on the origin); equipment and props already
-avoid it.
+Each environment's `build(world)` is self-contained. In `src/index.ts`, after
+`env.build(world)` runs, add your own entities/systems. Keep gameplay actors
+in the open center: the pavilion's sunken court (~11 m × 16 m), the cove's
+meadow (~13 m radius), or the factory's marked work zone (~18 m square).
 
 ## Tweaking the look
 
-Geometry sizes live in the `ROOM` / `BAY` / `WORK_HALF` constants and the `C`
-color palette at the top of `src/factory.ts`. The papercraft feel comes from
-`flatShading` plus low cylinder segment counts — see `src/papercraft.ts`.
+Each environment file starts with its dimension constants and a `C` color
+palette. The papercraft feel comes from `flatShading` plus low segment counts
+(see `src/papercraft.ts`); the gradients on trees, mountains, and skies are
+vertex colors painted by `gradientPaint` / `radialPaint`, and they survive the
+merge pass untouched.

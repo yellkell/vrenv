@@ -1,8 +1,9 @@
 /**
  * panel.ts
  *
- * Wires the welcome panel's button to enter/exit the immersive XR session.
- * Adapted from the IWSDK starter template.
+ * Wires the welcome panel: fills in the current environment's title/blurb and
+ * hooks the button up to enter/exit the immersive XR session. Adapted from
+ * the IWSDK starter template.
  */
 
 import {
@@ -14,6 +15,8 @@ import {
   UIKitDocument,
   VisibilityState,
 } from '@iwsdk/core';
+
+import { currentEnvironment } from './environments/registry.js';
 
 export class PanelSystem extends createSystem({
   welcomePanel: {
@@ -27,6 +30,12 @@ export class PanelSystem extends createSystem({
       if (!document) {
         return;
       }
+
+      const env = currentEnvironment();
+      const title = document.getElementById('env-title') as UIKit.Text;
+      title?.setProperties({ text: env.title });
+      const blurb = document.getElementById('env-blurb') as UIKit.Text;
+      blurb?.setProperties({ text: env.blurb });
 
       const xrButton = document.getElementById('xr-button') as UIKit.Text;
       xrButton.addEventListener('click', () => {

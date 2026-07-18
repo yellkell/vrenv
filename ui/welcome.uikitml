@@ -41,11 +41,9 @@
   }
 </style>
 <div class="panel-container">
-  <span class="heading"> Papercraft Factory Floor </span>
-  <span class="sub-heading">
-    Step onto the work floor. Walk the steel catwalk, trip the sliding bay
-    doors, and grab a wrench off the bench — a folded-paper industrial set
-    ready for your IWSDK game.
+  <span id="env-title" class="heading"> IWSDK Environments </span>
+  <span id="env-blurb" class="sub-heading">
+    A collection of ready-made papercraft environments for IWSDK games.
   </span>
   <button id="xr-button">Enter XR</button>
 </div>
